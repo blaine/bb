@@ -68,7 +68,8 @@ Read the installed SDK declarations for the exact current signatures.
 - `experimental_useCodeTheme`
 - `experimental_copyToClipboard`
 - `experimental_saveFile`
-- `experimental_useBrowserViews` — close this plugin's browser views
+- `experimental_useBrowserViews` — close this plugin's browser views and
+  listen for their new-tab requests
 
 ## Type exports
 
@@ -277,6 +278,7 @@ Read the installed SDK declarations for the exact current signatures.
 - `ExperimentalBrowserViewNavigation`
 - `ExperimentalBrowserViewOpenTabRequest`
 - `ExperimentalBrowserViews`
+- `ExperimentalBrowserViewsOpenTabRequest`
 - `ExperimentalAppPanelSurface`
 - `ExperimentalFixedTabTargetState`
 - `ExperimentalOpenFixedTabOptions`

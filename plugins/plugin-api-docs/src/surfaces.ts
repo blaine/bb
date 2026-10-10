@@ -1463,6 +1463,7 @@ export const SURFACE_GROUPS: SurfaceGroup[] = [
           "ExperimentalBrowserViewOpenTabRequest",
           "experimental_useBrowserViews",
           "ExperimentalBrowserViews",
+          "ExperimentalBrowserViewsOpenTabRequest",
         ],
         firstParty: [
           "Account Pooler [Experimental]",

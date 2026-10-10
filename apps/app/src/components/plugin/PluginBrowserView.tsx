@@ -3,6 +3,7 @@ import type { ExperimentalBrowserViewProps } from "@get-bb/plugin-sdk";
 import { cn } from "@bb/shared-ui/lib/utils";
 import { getDesktopBrowserApi } from "@/lib/bb-desktop";
 import { useAppNavigationHost } from "@/lib/app-navigation-host";
+import { hasPluginOpenTabListener } from "./pluginOpenTabListeners";
 import { useOptionalPaneContext } from "@/views/thread-detail/PaneContext";
 import {
   BrowserView,
@@ -76,9 +77,10 @@ function PluginBrowserViewForKey({
         override({ url: request.url });
         return;
       }
+      if (hasPluginOpenTabListener(pluginId)) return;
       navigation.openUrl({ url: request.url });
     },
-    [navigation],
+    [navigation, pluginId],
   );
   const shouldAttachExistingOnly = useCallback(() => false, []);
   const isKeyValid = isValidPluginBrowserViewKey(viewKey);

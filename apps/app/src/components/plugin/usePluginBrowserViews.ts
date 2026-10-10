@@ -3,6 +3,7 @@ import type { ExperimentalBrowserViews } from "@get-bb/plugin-sdk";
 import { getDesktopBrowserApi } from "@/lib/bb-desktop";
 import { closePluginBrowserView } from "@/components/browser/plugin-browser-view-ids";
 import { usePluginId } from "./plugin-context";
+import { addPluginOpenTabListener } from "./pluginOpenTabListeners";
 
 export function usePluginBrowserViews(): ExperimentalBrowserViews {
   const pluginId = usePluginId();
@@ -13,6 +14,13 @@ export function usePluginBrowserViews(): ExperimentalBrowserViews {
           desktopBrowser: getDesktopBrowserApi(),
           pluginId,
           viewKey,
+        });
+      },
+      onOpenTab(listener) {
+        return addPluginOpenTabListener({
+          desktopBrowser: getDesktopBrowserApi(),
+          pluginId,
+          listener,
         });
       },
     }),

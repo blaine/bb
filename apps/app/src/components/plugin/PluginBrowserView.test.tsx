@@ -9,7 +9,7 @@ import {
   waitFor,
 } from "@testing-library/react";
 import type { ExperimentalBrowserViewProps } from "@get-bb/plugin-sdk";
-import type { ReactNode } from "react";
+import { useEffect, type ReactNode } from "react";
 import {
   afterEach,
   beforeAll,
@@ -216,6 +216,94 @@ describe("experimental_BrowserView", () => {
 });
 
 describe("experimental_useBrowserViews", () => {
+  function OpenTabListener({
+    received,
+  }: {
+    received: Array<{ viewKey: string; url: string }>;
+  }) {
+    const views = pluginSdkAppImplementation.experimental_useBrowserViews();
+    useEffect(
+      () =>
+        views.onOpenTab((request) => {
+          received.push(request);
+        }),
+      [views],
+    );
+    return null;
+  }
+
+  it("delivers new-tab requests from this plugin's views to a listener, mounted or not", () => {
+    const received: Array<{ viewKey: string; url: string }> = [];
+    render(
+      <PluginSurface>
+        <OpenTabListener received={received} />
+      </PluginSurface>,
+    );
+    act(() => {
+      browser.emitScopedOpenTab({ tabId: VIEW_ID, url: "https://one.example/" });
+      browser.emitScopedOpenTab({ tabId: "plugin-view:acme:inbox.t2", url: "https://two.example/" });
+      browser.emitScopedOpenTab({ tabId: "plugin-view:acme-two:inbox", url: "https://other.example/" });
+      browser.emitScopedOpenTab({ tabId: "plugin-view:other:inbox", url: "https://other.example/" });
+      browser.emitScopedOpenTab({ tabId: "browser:abc:none", url: "https://panel.example/" });
+    });
+    expect(received).toEqual([
+      { viewKey: "inbox", url: "https://one.example/" },
+      { viewKey: "inbox.t2", url: "https://two.example/" },
+    ]);
+  });
+
+  it("skips default routing for views without onOpenTab while a listener is registered", async () => {
+    const received: Array<{ viewKey: string; url: string }> = [];
+    const openUrl = vi.fn(() => true);
+    render(
+      <PluginSurface openUrl={openUrl}>
+        <OpenTabListener received={received} />
+        {view()}
+      </PluginSurface>,
+    );
+    await waitFor(() => expect(browser.attachments()).toHaveLength(1));
+    act(() => {
+      browser.emitScopedOpenTab({ tabId: VIEW_ID, url: "https://link.example/" });
+    });
+    expect(openUrl).not.toHaveBeenCalled();
+    expect(received).toEqual([{ viewKey: "inbox", url: "https://link.example/" }]);
+  });
+
+  it("still calls a view's own onOpenTab alongside the listener", async () => {
+    const received: Array<{ viewKey: string; url: string }> = [];
+    const onOpenTab = vi.fn();
+    render(
+      <PluginSurface>
+        <OpenTabListener received={received} />
+        {view({ onOpenTab })}
+      </PluginSurface>,
+    );
+    await waitFor(() => expect(browser.attachments()).toHaveLength(1));
+    act(() => {
+      browser.emitScopedOpenTab({ tabId: VIEW_ID, url: "https://link.example/" });
+    });
+    expect(onOpenTab.mock.calls).toEqual([[{ url: "https://link.example/" }]]);
+    expect(received).toHaveLength(1);
+  });
+
+  it("stops delivering after unsubscribe and restores default routing", async () => {
+    const received: Array<{ viewKey: string; url: string }> = [];
+    const openUrl = vi.fn(() => true);
+    const { rerender } = render(
+      <PluginSurface openUrl={openUrl}>
+        <OpenTabListener received={received} />
+        {view()}
+      </PluginSurface>,
+    );
+    await waitFor(() => expect(browser.attachments()).toHaveLength(1));
+    rerender(<PluginSurface openUrl={openUrl}>{view()}</PluginSurface>);
+    act(() => {
+      browser.emitScopedOpenTab({ tabId: VIEW_ID, url: "https://link.example/" });
+    });
+    expect(received).toEqual([]);
+    expect(openUrl.mock.calls).toEqual([[{ url: "https://link.example/" }]]);
+  });
+
   it("closes only this plugin's view and ignores invalid keys", () => {
     function CloseButton() {
       const views = pluginSdkAppImplementation.experimental_useBrowserViews();

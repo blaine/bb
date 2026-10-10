@@ -135,6 +135,7 @@ describe("surface card copy", () => {
         "ExperimentalBrowserViewOpenTabRequest",
         "experimental_useBrowserViews",
         "ExperimentalBrowserViews",
+        "ExperimentalBrowserViewsOpenTabRequest",
       ]),
     );
   });

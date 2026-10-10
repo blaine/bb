@@ -1229,6 +1229,9 @@ function TestBrowserView({
 
 const INERT_BROWSER_VIEWS: ExperimentalBrowserViews = Object.freeze({
   close() {},
+  onOpenTab() {
+    return () => {};
+  },
 });
 
 type TestClipboard = (

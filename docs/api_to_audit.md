@@ -2177,7 +2177,12 @@ focused pane. `onNavigate` receives the live URL and title on every page state
 change. New-tab links go to `onOpenTab`, or by default to the current
 surface's URL routing: a right-panel Browser tab when the surface has one and
 the link preference opens links in bb (the default), otherwise the external
-browser. Unmounting hides the view and keeps it alive. It closes on window
+browser. `experimental_useBrowserViews().onOpenTab(listener)` receives `{
+viewKey, url }` for new-tab requests from every one of the plugin's views,
+mounted or not, through one shared desktop subscription, and returns its
+unsubscribe function. While a plugin has a listener, its views without an
+`onOpenTab` prop skip the default routing; a view's own `onOpenTab` still
+runs. Unmounting hides the view and keeps it alive. It closes on window
 close, on `experimental_useBrowserViews().close(viewKey)`, and when the plugin
 leaves the frontend inventory (disable, uninstall); a bundle reload does not
 close it. After `close(viewKey)`, a still-mounted view with that key reloads
@@ -2195,7 +2200,8 @@ navigates, when the view hides for any other reason, and when it shows again.
 If two panes mount the same key, the most recently mounted or focused one
 shows the page and the other offers Show here. Non-desktop clients render a
 fallback card with Open in browser and Copy link. The SDK test harness renders
-an inert `bb-browser-view` placeholder and an inert `close`.
+an inert `bb-browser-view` placeholder, an inert `close`, and an `onOpenTab`
+that never fires.
 
 **Core callers.** The right-panel Browser tab on the thread view, New thread
 screen, and plugin pages renders through the same `BrowserView` component and
@@ -2209,7 +2215,9 @@ it does not mount `ThreadDetailView`, `RootComposeView`, or
 in the same `openUrlByPreference`: panel Browser tabs subscribe through
 `usePanelBrowser`, so tabs that are inactive or unmounted still handle
 `window.open`, and plugin views subscribe through `useNativeBrowserView` and
-route through the surface's `openUrl`. Neither is a parallel action path.
+route through the surface's `openUrl`; a plugin-level `onOpenTab` listener
+receives the same desktop event for every view of that plugin. Neither is a
+parallel action path.
 
 **Out of scope.** Agent and `bb browser` CLI access to plugin-owned views
 (server browser services are thread-scoped); a host-provided tabbed browser;
@@ -2239,6 +2247,9 @@ recreate views from `url`).
 6. **Feature detection.** A plugin built against this SDK fails on hosts
    without the export. Decide on a supported capability check.
 7. **Consumer count.** Pinned Pages is the only consumer.
+8. **New-tab ownership.** A view's own `onOpenTab` and a plugin-level listener
+   both receive the same request. Decide whether a plugin-level listener should
+   suppress per-view callbacks too.
 
 ## `app.slots.experimental_sourceCodeRenderer` / `app.slots.experimental_diffRenderer` (`@get-bb/plugin-sdk/app`)
 

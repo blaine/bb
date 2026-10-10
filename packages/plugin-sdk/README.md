@@ -56,7 +56,9 @@ and later `url` changes are ignored; an empty or invalid `url` shows an error
 card until a valid one arrives. `experimental_useBrowserViews().close(viewKey)`
 discards the page, and a view with that key that is still mounted reloads from
 the URL it was first mounted with. New-tab links go to `onOpenTab`, or follow
-the current surface's link routing. Find in page is the `browser.find`
+the current surface's link routing; `experimental_useBrowserViews().onOpenTab`
+hears them from every one of the plugin's views, mounted or not, and replaces
+the default routing while subscribed. Find in page is the `browser.find`
 shortcut, not a toolbar control. Dialog, Popover, DropdownMenu, ContextMenu,
 Select, and HoverCard from bb hide the view while open; overlays you draw
 yourself do not. The view also hides when any ancestor whose overflow isn't

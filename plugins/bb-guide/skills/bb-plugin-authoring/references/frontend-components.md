@@ -171,9 +171,14 @@ className? }` —
   external browser). For a tab strip, render one `BrowserView` per tab and
   mount only the active one; unmounted views stay alive.
   `experimental_useBrowserViews()` returns `ExperimentalBrowserViews`
-  `{ close(viewKey) }`, which discards one of this plugin's pages; a view with
-  that key that is still mounted reloads from the URL it was first mounted
-  with, not the current `url` prop. Views close on `close(viewKey)`, when the
+  `{ close(viewKey), onOpenTab(listener) }`. `close` discards one of this
+  plugin's pages; a view with that key that is still mounted reloads from the
+  URL it was first mounted with, not the current `url` prop. `onOpenTab`
+  receives `ExperimentalBrowserViewsOpenTabRequest` `{ viewKey, url }` from
+  every one of this plugin's views, mounted or not, and returns its
+  unsubscribe function; a tab strip uses it so switching tabs never drops a
+  request from the page it just hid. While a listener is registered, views
+  without an `onOpenTab` prop skip the default routing. Views close on `close(viewKey)`, when the
   window closes, and when the plugin is disabled or uninstalled; reloading
   your bundle does not close them. Give the view a bounded height: a view
   clipped by any ancestor whose overflow isn't `visible` (including `hidden`

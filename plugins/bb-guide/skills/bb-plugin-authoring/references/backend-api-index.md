@@ -32,6 +32,7 @@ Read the installed declarations for exact current signatures.
 - `ExperimentalBrowserViewOpenTabRequest`
 - `ExperimentalBrowserViewProps`
 - `ExperimentalBrowserViews`
+- `ExperimentalBrowserViewsOpenTabRequest`
 - `ExperimentalDesktopBrowserAcquireInput`
 - `ExperimentalDesktopBrowserCreateInput`
 - `ExperimentalDesktopBrowserLease`
