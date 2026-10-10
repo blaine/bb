@@ -51,10 +51,17 @@ The frontend harness records both methods and accepts `openFilePreview` and
 
 Use `experimental_BrowserView` to show a live web page inside your own layout
 with bb's in-app browser and toolbar. Each `viewKey` is one page that stays
-alive while unmounted; `url` loads only when the page is created, and
-`experimental_useBrowserViews().close(viewKey)` discards it. New-tab links go
-to `onOpenTab`, or follow the current surface's link routing. The frontend
-harness renders an inert `bb-browser-view` placeholder.
+alive while unmounted. The first render with an HTTP(S) `url` creates the page
+and later `url` changes are ignored; an empty or invalid `url` shows an error
+card until a valid one arrives. `experimental_useBrowserViews().close(viewKey)`
+discards the page, and a view with that key that is still mounted reloads from
+the URL it was first mounted with. New-tab links go to `onOpenTab`, or follow
+the current surface's link routing. Find in page is the `browser.find`
+shortcut, not a toolbar control. Dialog, Popover, DropdownMenu, ContextMenu,
+Select, and HoverCard from bb hide the view while open; overlays you draw
+yourself do not. The view also hides when any ancestor whose overflow isn't
+`visible` clips its slot, or when the slot has zero size. The frontend harness
+renders an inert `bb-browser-view` placeholder.
 
 To show a terminal beside your UI, create it with `useSdk().terminals.create`
 in the thread, environment, or host directory you want, then call

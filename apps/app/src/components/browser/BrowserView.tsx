@@ -571,6 +571,7 @@ export function BrowserView({
 
   const canFindInPage =
     chrome === "full" &&
+    canRunBrowserCommands &&
     canShow &&
     desktopBrowser !== null &&
     desktopBrowser.findInPage !== undefined &&

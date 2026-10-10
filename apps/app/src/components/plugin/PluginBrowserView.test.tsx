@@ -123,6 +123,27 @@ describe("experimental_BrowserView", () => {
     });
   });
 
+  it("waits for a valid url before creating the view and then keeps it", async () => {
+    const rendered = render(<PluginSurface>{view({ url: "" })}</PluginSurface>);
+    expect(
+      await screen.findByText("This browser view can't open"),
+    ).toBeTruthy();
+    rendered.rerender(
+      <PluginSurface>{view({ url: "https://mail.example/" })}</PluginSurface>,
+    );
+    await waitFor(() => expect(browser.isShown(VIEW_ID)).toBe(true));
+    expect(screen.queryByText("This browser view can't open")).toBeNull();
+    rendered.rerender(
+      <PluginSurface>{view({ url: "https://other.example/" })}</PluginSurface>,
+    );
+    await act(async () => {});
+    expect(browser.attachments()).toHaveLength(1);
+    expect(browser.attachments()[0]).toMatchObject({
+      tabId: VIEW_ID,
+      url: "https://mail.example/",
+    });
+  });
+
   it("opens the page's new-tab links through the current surface by default", async () => {
     const openUrl = vi.fn(() => true);
     render(<PluginSurface openUrl={openUrl}>{view()}</PluginSurface>);

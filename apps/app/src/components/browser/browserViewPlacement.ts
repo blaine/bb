@@ -70,6 +70,8 @@ export function readBrowserViewPlacement(
     bottom = Math.min(bottom, clip.bottom);
   }
   const clipped =
+    rect.width <= 0 ||
+    rect.height <= 0 ||
     rect.top < top - BROWSER_VIEW_CLIP_TOLERANCE_PX ||
     rect.left < left - BROWSER_VIEW_CLIP_TOLERANCE_PX ||
     rect.right > right + BROWSER_VIEW_CLIP_TOLERANCE_PX ||

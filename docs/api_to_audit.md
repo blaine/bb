@@ -2164,34 +2164,52 @@ one page inside a plugin's layout, such as the main area of a `navPanel` page.
 The native view is `plugin-view:<pluginId>:<viewKey>`, owned by
 `plugin-view:<pluginId>`, so it cannot collide with panel Browser tabs, threads,
 or another plugin's views. `viewKey` matches `[A-Za-z0-9_\-:.]{1,128}`; `url`
-must be HTTP(S) and loads only when the view is first created. An invalid key
-or a non-HTTP(S) URL renders an error card and never attaches a native view.
-`chrome: "full"` (default) shows back, forward, reload, the address bar, find,
-browser toolbar actions, and open externally; `"none"` shows only the page.
-`onNavigate` receives the live URL and title on every page state change.
-New-tab links go to `onOpenTab`, or by default to the current surface's URL
-routing: a right-panel Browser tab when the surface has one and the link
-preference opens links in bb (the default), otherwise the external browser.
-Unmounting hides the view and keeps it alive. It closes on window close, on
-`experimental_useBrowserViews().close(viewKey)` (a mounted view with that key
-reloads from its `url`), and when the plugin leaves the frontend inventory
-(disable, uninstall); a bundle reload does not close it. A plugin that
-composes tabs should render only the active tab's view. Only bb's shared-ui
-overlays (Dialog, Popover, DropdownMenu, ContextMenu, Select, HoverCard; not
-Tooltip) hide the view; overlays a plugin bundles itself do not. A view also
-hides when an ancestor scroll container clips its slot, so a view taller than
-its scroll container never shows. A view hidden by an overlay shows a page
-snapshot meanwhile. If two panes mount the same key, the most recently mounted
-or focused one shows the page and the other offers Show here. Non-desktop clients render a fallback
-card with Open in browser and Copy link. The SDK test harness renders an inert
-`bb-browser-view` placeholder and an inert `close`.
+must be HTTP(S). The view tracks the latest `url` until the first render with
+an HTTP(S) URL, then freezes it: that URL creates the view and later changes
+are ignored. Until then, and for an invalid key, an error card renders and no
+native view attaches, so a plugin may pass `""` while its settings load.
+`chrome: "full"` (default) shows back, forward, reload, the address bar,
+browser toolbar actions, and open externally, and lets the `browser.find`
+shortcut open a find bar; `"none"` shows only the page and leaves
+`browser.find` and `browser.focusLocation` to other handlers. Find, reload,
+and focus-location shortcuts reach only the mount that owns the view in the
+focused pane. `onNavigate` receives the live URL and title on every page state
+change. New-tab links go to `onOpenTab`, or by default to the current
+surface's URL routing: a right-panel Browser tab when the surface has one and
+the link preference opens links in bb (the default), otherwise the external
+browser. Unmounting hides the view and keeps it alive. It closes on window
+close, on `experimental_useBrowserViews().close(viewKey)`, and when the plugin
+leaves the frontend inventory (disable, uninstall); a bundle reload does not
+close it. After `close(viewKey)`, a still-mounted view with that key reloads
+from the URL it was first mounted with, not the current `url` prop. A plugin
+that composes tabs should render only the active tab's view. Only these
+shared-ui overlays hide the view while open: Dialog (`DialogContent`),
+Popover, DropdownMenu, ContextMenu, Select, and HoverCard. Tooltip,
+AlertDialog, Sheet, Drawer, and Menubar do not, and neither do overlays a
+plugin draws itself. A view also hides when any ancestor whose overflow isn't
+`visible` (including `hidden` and `clip`) clips its slot, so a view taller
+than that ancestor never shows; a zero-size slot, such as one inside a
+`display: none` tab, counts as clipped. A view hidden by an overlay or a clip
+shows a page snapshot meanwhile; the snapshot is dropped when the page
+navigates, when the view hides for any other reason, and when it shows again.
+If two panes mount the same key, the most recently mounted or focused one
+shows the page and the other offers Show here. Non-desktop clients render a
+fallback card with Open in browser and Copy link. The SDK test harness renders
+an inert `bb-browser-view` placeholder and an inert `close`.
 
 **Core callers.** The right-panel Browser tab on the thread view, New thread
 screen, and plugin pages renders through the same `BrowserView` component and
 `useNativeBrowserView` hook (`apps/app/src/components/browser/`).
 `BrowserView.surfaces.test.tsx` runs one contract table (attach, hide on
 unmount, show after attach, every overlay type, snapshot, non-desktop fallback)
-against those three panels and the plugin page main area.
+against `BrowserTabDeck` mounted under the thread, New thread, and plugin page
+panel owner ids, and against `PluginBrowserView` for the plugin page main area;
+it does not mount `ThreadDetailView`, `RootComposeView`, or
+`PluginPanelRightPanelHost`. New-tab links use two subscription paths that end
+in the same `openUrlByPreference`: panel Browser tabs subscribe through
+`usePanelBrowser`, so tabs that are inactive or unmounted still handle
+`window.open`, and plugin views subscribe through `useNativeBrowserView` and
+route through the surface's `openUrl`. Neither is a parallel action path.
 
 **Out of scope.** Agent and `bb browser` CLI access to plugin-owned views
 (server browser services are thread-scoped); a host-provided tabbed browser;
@@ -2206,15 +2224,17 @@ recreate views from `url`).
 2. **Plugin-bundled overlays.** A plugin's own shadcn wrappers over the shimmed
    Radix modules do not hide the view. Decide between counting the shimmed
    Radix roots and exposing a dimming hook.
-3. **Cleanup after a window reload.** Unload closes views the renderer has
-   registered this session; views created before a window reload and not
-   remounted since stay open until the window closes. Decide whether the
-   desktop should close by owner prefix.
+3. **Cleanup after a window reload.** Disabling or uninstalling a plugin
+   closes only views the renderer has registered this session; after a window
+   reload, views not yet re-mounted stay open until the window closes. Decide
+   whether the desktop should close by owner prefix.
 4. **Browser commands.** Find, reload, and focus-location run in whichever
    handler answers first when a plugin view and a panel Browser tab share the
    focused pane.
 5. **Toolbar actions.** Other plugins' browser toolbar actions render in a
-   plugin view's chrome and can evaluate script in its page. Confirm that is
+   plugin view's chrome and can evaluate script in its page. Their
+   `ExperimentalPluginBrowserToolbarActionProps.threadId` receives the view's
+   owner id, `plugin-view:<pluginId>`, not a thread id. Confirm both are
    intended.
 6. **Feature detection.** A plugin built against this SDK fails on hosts
    without the export. Decide on a supported capability check.
@@ -2468,9 +2488,11 @@ Docs: `frontend-registration.md`.
 
 ## `app.slots.experimental_browserToolbarAction` (`@get-bb/plugin-sdk/app`)
 
-Renders a plugin component beside the address bar in each Browser tab. It
-receives `threadId`, `tabId`, `url` and a compact-viewport hint, with a crash
-boundary per tab mount.
+Renders a plugin component beside the address bar in each Browser tab and
+each `experimental_BrowserView` with full chrome. It receives the owning
+`threadId` (the owner id `plugin-view:<pluginId>` for a plugin browser view),
+`tabId`, `url` and a compact-viewport hint, with a crash boundary per tab
+mount.
 
 Docs: `frontend-registration.md`.
 

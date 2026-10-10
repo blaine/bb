@@ -1184,27 +1184,6 @@ function TestSourceCode({
  * Stand-in for the host-owned diff viewer: emits the raw patch in a
  * recognizable wrapper carrying the resolved presentation.
  */
-function TestBrowserView({
-  viewKey,
-  url,
-  chrome = "full",
-  className,
-}: ExperimentalBrowserViewProps) {
-  return (
-    <div
-      data-testid="bb-browser-view"
-      data-view-key={viewKey}
-      data-url={url}
-      data-chrome={chrome}
-      className={className}
-    />
-  );
-}
-
-const INERT_BROWSER_VIEWS: ExperimentalBrowserViews = Object.freeze({
-  close() {},
-});
-
 function TestDiff({
   patch,
   path,
@@ -1230,6 +1209,27 @@ function TestDiff({
     </pre>
   );
 }
+
+function TestBrowserView({
+  viewKey,
+  url,
+  chrome = "full",
+  className,
+}: ExperimentalBrowserViewProps) {
+  return (
+    <div
+      data-testid="bb-browser-view"
+      data-view-key={viewKey}
+      data-url={url}
+      data-chrome={chrome}
+      className={className}
+    />
+  );
+}
+
+const INERT_BROWSER_VIEWS: ExperimentalBrowserViews = Object.freeze({
+  close() {},
+});
 
 type TestClipboard = (
   content: ExperimentalClipboardContent,

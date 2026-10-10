@@ -43,9 +43,11 @@ function flushFrames(): void {
 function ScrolledView({
   browser,
   dialogOpen,
+  canShow = true,
 }: {
   browser: RecordingDesktopBrowser;
   dialogOpen: boolean;
+  canShow?: boolean;
 }) {
   const [coordinator] = useState(() =>
     createBrowserViewVisibilityCoordinator(browser.api),
@@ -59,7 +61,7 @@ function ScrolledView({
           environmentId={null}
           initialUrl="https://mail.example/"
           chrome="none"
-          canShow
+          canShow={canShow}
           canHandleBrowserCommands
           visibilityCoordinator={coordinator}
           shouldAttachExistingOnly={() => false}
@@ -200,5 +202,138 @@ describe("native browser view placement", () => {
     await waitFor(() => expect(browser.attachments()).toHaveLength(1));
     flushFrames();
     expect(browser.isShown(VIEW_ID)).toBe(false);
+  });
+
+  it("hides a zero-size slot such as a tab hidden with display:none", async () => {
+    render(<ScrolledView browser={browser} dialogOpen={false} />);
+    await waitFor(() => expect(browser.isShown(VIEW_ID)).toBe(true));
+    flushFrames();
+    rects.slot = new DOMRect(0, 0, 0, 0);
+    fireEvent.scroll(screen.getByTestId("scroller"));
+    flushFrames();
+    expect(browser.isShown(VIEW_ID)).toBe(false);
+    rects.slot = new DOMRect(0, 0, 400, 0);
+    fireEvent.scroll(screen.getByTestId("scroller"));
+    flushFrames();
+    expect(browser.isShown(VIEW_ID)).toBe(false);
+    rects.slot = new DOMRect(0, 0, 400, 200);
+    fireEvent.scroll(screen.getByTestId("scroller"));
+    flushFrames();
+    expect(browser.isShown(VIEW_ID)).toBe(true);
+  });
+
+  it.each(["transitioncancel", "animationcancel"])(
+    "rechecks placement after a %s",
+    async (eventType) => {
+      render(<ScrolledView browser={browser} dialogOpen={false} />);
+      await waitFor(() => expect(browser.isShown(VIEW_ID)).toBe(true));
+      flushFrames();
+      rects.slot = new DOMRect(0, 40, 400, 200);
+      act(() => {
+        screen
+          .getByTestId("scroller")
+          .dispatchEvent(new Event(eventType, { bubbles: true }));
+      });
+      flushFrames();
+      expect(browser.bounds(VIEW_ID).at(-1)).toEqual({
+        x: 0,
+        y: 40,
+        width: 400,
+        height: 200,
+      });
+    },
+  );
+
+  it("stops listening for cancelled transitions and animations once it unmounts", async () => {
+    const view = render(<ScrolledView browser={browser} dialogOpen={false} />);
+    await waitFor(() => expect(browser.isShown(VIEW_ID)).toBe(true));
+    flushFrames();
+    const boundsBefore = browser.bounds(VIEW_ID).length;
+    view.unmount();
+    rects.slot = new DOMRect(0, 40, 400, 200);
+    document.dispatchEvent(new Event("transitioncancel"));
+    document.dispatchEvent(new Event("animationcancel"));
+    flushFrames();
+    expect(browser.bounds(VIEW_ID)).toHaveLength(boundsBefore);
+  });
+
+  it("ignores a snapshot that arrives while the page is showing", async () => {
+    const view = render(<ScrolledView browser={browser} dialogOpen={false} />);
+    await waitFor(() => expect(browser.isShown(VIEW_ID)).toBe(true));
+    act(() => browser.emitSnapshot({ tabId: VIEW_ID, dataUrl: SNAPSHOT }));
+    expect(view.container.querySelector("img")).toBeNull();
+    view.rerender(
+      <ScrolledView browser={browser} dialogOpen={false} canShow={false} />,
+    );
+    await waitFor(() => expect(browser.isShown(VIEW_ID)).toBe(false));
+    expect(view.container.querySelector("img")).toBeNull();
+  });
+
+  it("drops a held snapshot when the page navigates", async () => {
+    const view = render(<ScrolledView browser={browser} dialogOpen={false} />);
+    await waitFor(() => expect(browser.isShown(VIEW_ID)).toBe(true));
+    act(() =>
+      browser.emitState({
+        tabId: VIEW_ID,
+        url: "https://mail.example/",
+        title: "Inbox",
+        isLoading: false,
+        canGoBack: false,
+        canGoForward: false,
+        errorText: null,
+      }),
+    );
+    view.rerender(<ScrolledView browser={browser} dialogOpen />);
+    await waitFor(() => expect(browser.isShown(VIEW_ID)).toBe(false));
+    act(() => browser.emitSnapshot({ tabId: VIEW_ID, dataUrl: SNAPSHOT }));
+    expect(
+      view.container.querySelector(`img[src="${SNAPSHOT}"]`),
+    ).not.toBeNull();
+    act(() =>
+      browser.emitState({
+        tabId: VIEW_ID,
+        url: "https://mail.example/sent",
+        title: "Sent",
+        isLoading: false,
+        canGoBack: true,
+        canGoForward: false,
+        errorText: null,
+      }),
+    );
+    expect(view.container.querySelector("img")).toBeNull();
+  });
+
+  it("shows the host window resize snapshot and drops it once the resize ends", async () => {
+    const view = render(<ScrolledView browser={browser} dialogOpen={false} />);
+    await waitFor(() => expect(browser.isShown(VIEW_ID)).toBe(true));
+    act(() => {
+      window.dispatchEvent(new Event("resize"));
+    });
+    act(() => browser.emitSnapshot({ tabId: VIEW_ID, dataUrl: SNAPSHOT }));
+    expect(
+      view.container.querySelector(`img[src="${SNAPSHOT}"]`),
+    ).not.toBeNull();
+    act(() => browser.emitSnapshot({ tabId: VIEW_ID, dataUrl: null }));
+    expect(view.container.querySelector("img")).toBeNull();
+    act(() => browser.emitSnapshot({ tabId: VIEW_ID, dataUrl: SNAPSHOT }));
+    expect(view.container.querySelector("img")).toBeNull();
+  });
+
+  it("drops a resize snapshot when the view hides without capturing a new one", async () => {
+    const view = render(<ScrolledView browser={browser} dialogOpen={false} />);
+    await waitFor(() => expect(browser.isShown(VIEW_ID)).toBe(true));
+    act(() => {
+      window.dispatchEvent(new Event("resize"));
+    });
+    act(() => browser.emitSnapshot({ tabId: VIEW_ID, dataUrl: SNAPSHOT }));
+    expect(
+      view.container.querySelector(`img[src="${SNAPSHOT}"]`),
+    ).not.toBeNull();
+    view.rerender(
+      <ScrolledView browser={browser} dialogOpen={false} canShow={false} />,
+    );
+    await waitFor(() => expect(browser.isShown(VIEW_ID)).toBe(false));
+    expect(browser.snapshotRequests()).toEqual([]);
+    expect(view.container.querySelector("img")).toBeNull();
   });
 });

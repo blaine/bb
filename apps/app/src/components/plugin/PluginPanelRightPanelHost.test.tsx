@@ -13,7 +13,7 @@ import {
   waitFor,
 } from "@testing-library/react";
 import { createStore, Provider as JotaiProvider } from "jotai";
-import type { ReactNode } from "react";
+import { useContext, type ReactNode } from "react";
 import {
   afterEach,
   beforeAll,
@@ -35,6 +35,7 @@ import {
   serializeFixedPanelTabsState,
 } from "@/lib/fixed-panel-tabs-state";
 import * as panelSplits from "@/components/secondary-panel/lazySecondaryPanelComponents";
+import { BrowserViewHostContext } from "@/components/browser/BrowserViewHostContext";
 import { PluginPanelRightPanelHost } from "./PluginPanelRightPanelHost";
 import { resetRecentlyClosedPanelTabsForTest } from "@/components/secondary-panel/useThreadFileTabs";
 import { openPluginDetailsInWorkspace } from "./plugin-detail-opener";
@@ -702,6 +703,19 @@ function PluginDetailNavigationLink() {
   );
 }
 
+function MainBrowserViewHostProbe() {
+  const host = useContext(BrowserViewHostContext);
+  return (
+    <output data-testid="main-browser-view-host">
+      {host.canShowNativeBrowserView ? "visible" : "hidden"}
+    </output>
+  );
+}
+
+function mainBrowserViewHost(): string | null {
+  return screen.getByTestId("main-browser-view-host").textContent;
+}
+
 function CurrentPath() {
   return <output data-testid="current-path">{useLocation().pathname}</output>;
 }
@@ -728,6 +742,7 @@ function renderHost(panelPath = "board", subPath = "", store = createStore()) {
                 subPath={subPath}
               >
                 <div>Plugin page</div>
+                <MainBrowserViewHostProbe />
                 <PluginDetailNavigationLink />
                 <FileIntentButtons />
               </PluginPanelRightPanelHost>
@@ -991,6 +1006,36 @@ describe("PluginPanelRightPanelHost", () => {
     );
     expect(screen.queryByRole("button", { name: "Secrets" })).toBeNull();
     expect(screen.queryByRole("button", { name: "Automations" })).toBeNull();
+  });
+
+  it("hides main-area browser views while a full-page panel covers them", async () => {
+    renderHost();
+    expect(mainBrowserViewHost()).toBe("visible");
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Show right panel" }),
+    );
+    expect(await screen.findByTestId("plugin-page-new-tab")).toBeTruthy();
+    expect(mainBrowserViewHost()).toBe("visible");
+    fireEvent.click(screen.getByRole("button", { name: "Maximize pane" }));
+    expect(mainBrowserViewHost()).toBe("hidden");
+    fireEvent.click(screen.getByRole("button", { name: "Restore split" }));
+    expect(mainBrowserViewHost()).toBe("visible");
+  });
+
+  it("hides main-area browser views while the compact drawer is open", async () => {
+    viewportState.isCompactViewport = true;
+    renderHost();
+    expect(mainBrowserViewHost()).toBe("visible");
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Show right panel" }),
+    );
+    expect(await screen.findByTestId("plugin-page-new-tab")).toBeTruthy();
+    expect(mainBrowserViewHost()).toBe("hidden");
+    fireEvent.click(screen.getByRole("button", { name: "Close New tab" }));
+    expect(
+      await screen.findByRole("button", { name: "Show right panel" }),
+    ).toBeTruthy();
+    expect(mainBrowserViewHost()).toBe("visible");
   });
 
   it("closes the compact drawer when its remaining tab closes", async () => {

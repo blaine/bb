@@ -237,8 +237,10 @@ title and icon for a picker. Keys are `bb--core/<id>` and `<pluginId>/<id>`.
 ### A control in the Browser toolbar
 
 `app.slots.experimental_browserToolbarAction` renders a component beside the
-address bar of every built-in Browser tab. The component receives the owning
-`threadId`, current `tabId`, top-level `url`, and `isCompactViewport` state.
+address bar of every built-in Browser tab and every `experimental_BrowserView`
+with full chrome. The component receives the owning `threadId` (the owner id
+`plugin-view:<pluginId>` in a plugin's browser view), current `tabId`,
+top-level `url`, and `isCompactViewport` state.
 Use these host-provided values to scope actions to the visible tab; do not infer
 the active Browser from global state.
 

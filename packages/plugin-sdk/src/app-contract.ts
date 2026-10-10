@@ -491,7 +491,11 @@ export interface ExperimentalPluginBrowserPage {
 }
 
 export interface ExperimentalPluginBrowserToolbarActionProps {
-  /** Thread that owns the Browser tab. */
+  /**
+   * Owner id of the Browser tab: the thread's id for a thread's Browser tab,
+   * the panel's owner id on other surfaces, and `plugin-view:<pluginId>` when
+   * the action renders in a plugin's `experimental_BrowserView`.
+   */
   threadId: string;
   /** Browser tab currently rendering the action. */
   tabId: string;
@@ -3823,9 +3827,10 @@ export interface ExperimentalBrowserViewProps {
    */
   viewKey: string;
   /**
-   * HTTP(S) URL loaded when the view is first created. Later changes are
-   * ignored; use another `viewKey` to show another page. Other schemes
-   * render an error card.
+   * HTTP(S) URL that creates the view. The view follows this prop until the
+   * first render with an HTTP(S) URL and ignores later changes; use another
+   * `viewKey` to show another page. Until then, an error card renders, so
+   * `""` is safe while settings load.
    */
   url: string;
   /** `"full"` (default) shows bb's browser toolbar; `"none"` shows only the page. */
@@ -3848,8 +3853,9 @@ export interface ExperimentalBrowserViewProps {
  */
 export interface ExperimentalBrowserViews {
   /**
-   * Close one of this plugin's views and discard its page. A mounted view
-   * with that key reloads from its `url`. Invalid keys are ignored.
+   * Close one of this plugin's views and discard its page. A view with that
+   * key that is still mounted reloads from the URL it was first mounted
+   * with, not its current `url` prop. Invalid keys are ignored.
    */
   close(viewKey: string): void;
 }

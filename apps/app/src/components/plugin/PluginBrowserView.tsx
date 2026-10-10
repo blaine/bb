@@ -43,7 +43,11 @@ function PluginBrowserViewForKey({
   className,
 }: ExperimentalBrowserViewProps) {
   const pluginId = usePluginId();
-  const [createdUrl] = useState(url);
+  const [frozenUrl, setFrozenUrl] = useState<string | null>(null);
+  if (frozenUrl === null && isHttpUrl(url)) {
+    setFrozenUrl(url);
+  }
+  const createdUrl = frozenUrl ?? url;
   const host = useContext(BrowserViewHostContext);
   const isPaneFocused = useOptionalPaneContext()?.isFocused ?? true;
   const navigation = useAppNavigationHost();

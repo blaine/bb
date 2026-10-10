@@ -104,6 +104,9 @@ export function useNativeBrowserView({
   onOpenTabRef.current = onOpenTab;
   const hasOpenTabHandler = onOpenTab !== null;
   const lastSentBoundsRef = useRef<BbDesktopBrowserViewBounds | null>(null);
+  const isShownRef = useRef(false);
+  const isHostResizingRef = useRef(false);
+  const lastStateUrlRef = useRef<string | null>(null);
 
   useEffect(() => {
     let current = true;
@@ -206,18 +209,36 @@ export function useNativeBrowserView({
       if (nextState.tabId !== viewId) {
         return;
       }
+      const lastStateUrl = lastStateUrlRef.current;
+      lastStateUrlRef.current = nextState.url;
+      if (lastStateUrl !== null && lastStateUrl !== nextState.url) {
+        setSnapshotUrl(null);
+      }
       setState(nextState);
       setCurrentUrl(nextState.url);
       onStateRef.current(nextState);
     });
+    const markHostResizing = () => {
+      isHostResizingRef.current = true;
+    };
+    window.addEventListener("resize", markHostResizing);
     const unsubscribeSnapshot = desktopBrowser.onSnapshot?.((snapshot) => {
       if (snapshot.tabId !== viewId) {
+        return;
+      }
+      if (snapshot.dataUrl === null) {
+        isHostResizingRef.current = false;
+        setSnapshotUrl(null);
+        return;
+      }
+      if (isShownRef.current && !isHostResizingRef.current) {
         return;
       }
       setSnapshotUrl(snapshot.dataUrl);
     });
     return () => {
       unsubscribeState();
+      window.removeEventListener("resize", markHostResizing);
       unsubscribeSnapshot?.();
       visibilityCoordinator?.release(viewId);
       setAttachedIdentity(null);
@@ -342,7 +363,9 @@ export function useNativeBrowserView({
       passive: true,
     });
     document.addEventListener("transitionend", schedule, true);
+    document.addEventListener("transitioncancel", schedule, true);
     document.addEventListener("animationend", schedule, true);
+    document.addEventListener("animationcancel", schedule, true);
     const observer = new MutationObserver(schedule);
     observer.observe(document.body, {
       attributes: true,
@@ -353,7 +376,9 @@ export function useNativeBrowserView({
     return () => {
       document.removeEventListener("scroll", schedule, { capture: true });
       document.removeEventListener("transitionend", schedule, true);
+      document.removeEventListener("transitioncancel", schedule, true);
       document.removeEventListener("animationend", schedule, true);
+      document.removeEventListener("animationcancel", schedule, true);
       observer.disconnect();
       if (frame !== null) window.cancelAnimationFrame(frame);
     };
@@ -373,10 +398,14 @@ export function useNativeBrowserView({
       return;
     }
     visibilityCoordinator.show(viewId, syncBounds, { focus: false });
+    isShownRef.current = true;
     setSnapshotUrl(null);
     return () => {
+      isShownRef.current = false;
       if (isDimmedRef.current || isClippedRef.current) {
         desktopBrowser?.captureSnapshot?.(viewId);
+      } else {
+        setSnapshotUrl(null);
       }
       visibilityCoordinator.hide(viewId);
     };

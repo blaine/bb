@@ -153,28 +153,38 @@ className? }` —
   (`ExperimentalBrowserViewProps`):
   `{ viewKey, url, chrome?, onNavigate?, onOpenTab?, className? }`.
   `viewKey` is a stable key matching `[A-Za-z0-9_\-:.]{1,128}`; the same key
-  returns to the same live page without a reload. `url` must be HTTP(S) and
-  loads only when the view is first created; change `viewKey` to show another
-  page. An invalid key or a non-HTTP(S) URL renders an error card instead.
-  `chrome` is `"full"` (default, bb's toolbar) or `"none"`. `onNavigate`
-  receives `ExperimentalBrowserViewNavigation` `{ url, title }` on every page
-  state change. `onOpenTab` receives `ExperimentalBrowserViewOpenTabRequest`
-  `{ url }` for new-tab links; omit it to open them the way the current
-  surface opens links (a right-panel Browser tab when the surface has one and
-  the user opens links in bb, otherwise the external browser). For a tab
-  strip, render one `BrowserView` per tab and mount only the active one;
-  unmounted views stay alive.
+  returns to the same live page without a reload. `url` must be HTTP(S). The
+  view follows `url` until the first render with an HTTP(S) URL, which creates
+  the page; later changes are ignored, so change `viewKey` to show another
+  page. Until then, and for an invalid key, an error card renders instead, so
+  passing `""` while your settings load is fine.
+  `chrome` is `"full"` (default: back, forward, reload, address bar, browser
+  toolbar actions, open externally) or `"none"`. Find in page is the
+  `browser.find` keyboard shortcut, not a toolbar control. Find and
+  focus-location need full chrome; browser shortcuts reach only the view in
+  the focused pane.
+  `onNavigate` receives `ExperimentalBrowserViewNavigation` `{ url, title }`
+  on every page state change. `onOpenTab` receives
+  `ExperimentalBrowserViewOpenTabRequest` `{ url }` for new-tab links; omit it
+  to open them the way the current surface opens links (a right-panel Browser
+  tab when the surface has one and the user opens links in bb, otherwise the
+  external browser). For a tab strip, render one `BrowserView` per tab and
+  mount only the active one; unmounted views stay alive.
   `experimental_useBrowserViews()` returns `ExperimentalBrowserViews`
-  `{ close(viewKey) }`, which discards one of this plugin's pages. Views close
-  on `close(viewKey)`, when the window closes, and when the plugin is disabled
-  or uninstalled; reloading your bundle does not close them. Give the view a
-  bounded height: a view clipped by its scroll container hides, and one taller
-  than its container never shows. bb's own dialogs, popovers, dropdown, context
-  and select menus, and hover cards hide the view while open; overlays your
-  bundle renders itself do not. Web clients render Open in browser and Copy
-  link. The testing harness renders an inert `bb-browser-view` placeholder.
-  Agents and `bb browser` cannot see these views. Experimental: see
-  `docs/api_to_audit.md`.
+  `{ close(viewKey) }`, which discards one of this plugin's pages; a view with
+  that key that is still mounted reloads from the URL it was first mounted
+  with, not the current `url` prop. Views close on `close(viewKey)`, when the
+  window closes, and when the plugin is disabled or uninstalled; reloading
+  your bundle does not close them. Give the view a bounded height: a view
+  clipped by any ancestor whose overflow isn't `visible` (including `hidden`
+  and `clip`) hides, one taller than that ancestor never shows, and a
+  zero-size slot counts as clipped. These bb overlays hide the view while
+  open: Dialog (`DialogContent`), Popover, DropdownMenu, ContextMenu, Select,
+  and HoverCard. Tooltip, AlertDialog, Sheet, Drawer, and Menubar do not, and
+  neither do overlays your bundle draws itself. Web clients render Open in
+  browser and Copy link. The testing harness renders an inert
+  `bb-browser-view` placeholder. Agents and `bb browser` cannot see these
+  views. Experimental: see `docs/api_to_audit.md`.
 
   ```tsx
   import { experimental_BrowserView as BrowserView } from "@get-bb/plugin-sdk/app";
