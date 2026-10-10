@@ -41,6 +41,8 @@ import type {
 } from "@get-bb/plugin-sdk";
 import { normalizePluginThreadRowStatus } from "@get-bb/plugin-sdk/internal/composer-customization-validation";
 import { resetCrashedPluginSlots } from "@/components/plugin/PluginSlotMount";
+import { closePluginBrowserViews } from "@/components/browser/plugin-browser-view-ids";
+import { getDesktopBrowserApi } from "@/lib/bb-desktop";
 import { runWithPluginDomIsolationAsync } from "./foreign-dom-mutation-guard";
 import { applyPluginCss, retainPluginCss } from "./plugin-css";
 import {
@@ -378,6 +380,7 @@ export interface PluginFrontendReconcileDeps {
     registrations: PluginRegistrationSet,
   ) => void;
   removeRegistrations: (pluginId: string) => void;
+  closePluginBrowserViews: (pluginId: string) => void;
   beginSlotBatch: () => () => void;
   warn: (message: string) => void;
   routePluginId: () => string | null;
@@ -646,6 +649,7 @@ export async function reconcilePluginFrontends(
     state.pendingControllers.get(pluginId)?.abort();
     state.pendingControllers.delete(pluginId);
     await deactivateCommittedGeneration(pluginId, state, deps);
+    deps.closePluginBrowserViews(pluginId);
     state.records.delete(pluginId);
     state.appliedHashes.delete(pluginId);
     state.diagnostics.delete(pluginId);
@@ -933,6 +937,11 @@ const browserReconcileDeps: PluginFrontendReconcileDeps = {
   resetCrashedSlots: resetCrashedPluginSlots,
   setRegistrations: setPluginSlotRegistrations,
   removeRegistrations: removePluginSlotRegistrations,
+  closePluginBrowserViews: (pluginId) =>
+    closePluginBrowserViews({
+      desktopBrowser: getDesktopBrowserApi(),
+      pluginId,
+    }),
   beginSlotBatch: () =>
     beginPluginSlotBatch({ maxHoldMs: PLUGIN_SLOT_BATCH_MAX_HOLD_MS }),
   warn: (message) => console.warn(message),

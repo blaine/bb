@@ -20,6 +20,7 @@ import {
   COARSE_POINTER_COMPACT_ICON_SIZE_SHRINK_CLASS,
   COARSE_POINTER_TEXT_SM_CLASS,
 } from "@bb/shared-ui/coarse-pointer-sizing";
+import { Button } from "@bb/shared-ui/button";
 import { Icon } from "@bb/shared-ui/icon";
 import { cn } from "@bb/shared-ui/lib/utils";
 import { useIsCompactViewport } from "@bb/shared-ui/hooks/use-compact-viewport";
@@ -49,6 +50,7 @@ import {
 import { BrowserNewTabScreen } from "@/components/secondary-panel/BrowserNewTabScreen";
 import { SECONDARY_PANEL_TOP_CHROME_BACKGROUND_CLASS } from "@/components/secondary-panel/panelChromeClasses";
 import type { BrowserViewVisibilityCoordinator } from "@/components/secondary-panel/browserViewVisibilityCoordinator";
+import { useOptionalPaneContext } from "@/views/thread-detail/PaneContext";
 import { BrowserViewFallbackCard } from "./BrowserViewFallbackCard";
 import {
   useNativeBrowserView,
@@ -400,6 +402,8 @@ export function BrowserView({
     pageLoadErrorText,
     isVisible,
     isDimmed,
+    isOwner,
+    claim,
   } = useNativeBrowserView({
     viewId,
     ownerId,
@@ -412,6 +416,11 @@ export function BrowserView({
     onState: handleState,
     onOpenTab,
   });
+  const canRunBrowserCommands = canHandleBrowserCommands && isOwner;
+  const isPaneFocused = useOptionalPaneContext()?.isFocused ?? false;
+  useEffect(() => {
+    if (isPaneFocused) claim();
+  }, [claim, isPaneFocused]);
   const hasPageLoadError = pageLoadErrorText !== null;
 
   useEffect(() => {
@@ -455,7 +464,7 @@ export function BrowserView({
 
   useLayoutEffect(() => {
     if (!isPageFocusPending) return;
-    if (!canShow || !canHandleBrowserCommands || hasPageLoadError || isDimmed) {
+    if (!canShow || !canRunBrowserCommands || hasPageLoadError || isDimmed) {
       setIsPageFocusPending(false);
       return;
     }
@@ -465,7 +474,7 @@ export function BrowserView({
   }, [
     isPageFocusPending,
     canShow,
-    canHandleBrowserCommands,
+    canRunBrowserCommands,
     hasPageLoadError,
     isDimmed,
     isVisible,
@@ -546,11 +555,7 @@ export function BrowserView({
   }, [desktopBrowser, state?.isLoading, viewId]);
 
   const handleFocusLocation = useCallback((): boolean => {
-    if (
-      chrome === "none" ||
-      !canHandleBrowserCommands ||
-      desktopBrowser === null
-    )
+    if (chrome === "none" || !canRunBrowserCommands || desktopBrowser === null)
       return false;
     setAddressDraft(currentUrl);
     setIsEditing(true);
@@ -560,7 +565,7 @@ export function BrowserView({
       addressInputRef.current?.select();
     });
     return true;
-  }, [canHandleBrowserCommands, chrome, currentUrl, desktopBrowser]);
+  }, [canRunBrowserCommands, chrome, currentUrl, desktopBrowser]);
 
   useAppCommandHandler("browser.focusLocation", handleFocusLocation, 100);
 
@@ -643,7 +648,7 @@ export function BrowserView({
   useAppCommandHandler(
     "browser.reload",
     () => {
-      if (!canHandleBrowserCommands || desktopBrowser === null || !hasPage) {
+      if (!canRunBrowserCommands || desktopBrowser === null || !hasPage) {
         return false;
       }
       desktopBrowser.reload(viewId);
@@ -668,10 +673,33 @@ export function BrowserView({
     );
   }
 
+  if (!isOwner) {
+    return (
+      <div
+        data-app-browser
+        className={cn(
+          "flex h-full min-h-0 flex-col items-center justify-center gap-3 px-6 text-center",
+          className,
+        )}
+      >
+        <p
+          className={cn("text-muted-foreground", COARSE_POINTER_TEXT_SM_CLASS)}
+        >
+          This page is showing in another pane.
+        </p>
+        <Button type="button" variant="outline" size="sm" onClick={claim}>
+          Show here
+        </Button>
+      </div>
+    );
+  }
+
   return (
     <div
       data-app-browser
       className={cn("flex h-full min-h-0 flex-col", className)}
+      onPointerDownCapture={claim}
+      onFocusCapture={claim}
     >
       {chrome === "full" ? (
         <BrowserChrome

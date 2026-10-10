@@ -25,6 +25,7 @@ import {
   browserViewBoundsEqual,
   readBrowserViewPlacement,
 } from "./browserViewPlacement";
+import { useBrowserViewMount } from "./browserViewMounts";
 
 export interface BrowserViewOpenTabRequest {
   url: string;
@@ -55,10 +56,13 @@ export interface NativeBrowserView {
   pageLoadErrorText: string | null;
   isVisible: boolean;
   isDimmed: boolean;
+  isOwner: boolean;
+  claim: () => void;
 }
 
 interface AttachedBrowserViewIdentity {
   environmentId: string | null;
+  generation: number;
   ownerId: string;
   viewId: string;
 }
@@ -83,6 +87,7 @@ export function useNativeBrowserView({
     () => getDesktopBrowserApi(),
     [],
   );
+  const { isOwner, generation, claim } = useBrowserViewMount(viewId);
   const slotRef = useRef<HTMLDivElement>(null);
   const [state, setState] = useState<BbDesktopBrowserState | null>(null);
   const [control, setControl] = useState<BbDesktopBrowserControl | null>(null);
@@ -182,7 +187,7 @@ export function useNativeBrowserView({
   }, [readBounds]);
 
   useEffect(() => {
-    if (desktopBrowser === null) {
+    if (desktopBrowser === null || !isOwner) {
       return;
     }
     const initialBounds = syncInitialBounds();
@@ -196,7 +201,7 @@ export function useNativeBrowserView({
       bounds: initialBounds,
       visible: false,
     });
-    setAttachedIdentity({ environmentId, ownerId, viewId });
+    setAttachedIdentity({ environmentId, generation, ownerId, viewId });
     const unsubscribeState = desktopBrowser.onState((nextState) => {
       if (nextState.tabId !== viewId) {
         return;
@@ -215,10 +220,13 @@ export function useNativeBrowserView({
       unsubscribeState();
       unsubscribeSnapshot?.();
       visibilityCoordinator?.release(viewId);
+      setAttachedIdentity(null);
     };
   }, [
     desktopBrowser,
     environmentId,
+    generation,
+    isOwner,
     ownerId,
     syncInitialBounds,
     viewId,
@@ -226,7 +234,7 @@ export function useNativeBrowserView({
   ]);
 
   useEffect(() => {
-    if (desktopBrowser === null || !hasOpenTabHandler) {
+    if (desktopBrowser === null || !hasOpenTabHandler || !isOwner) {
       return;
     }
     return desktopBrowser.onScopedOpenTab?.((request) => {
@@ -235,11 +243,11 @@ export function useNativeBrowserView({
       }
       onOpenTabRef.current?.({ url: request.url });
     });
-  }, [desktopBrowser, hasOpenTabHandler, viewId]);
+  }, [desktopBrowser, hasOpenTabHandler, isOwner, viewId]);
 
   useEffect(() => {
     const element = slotRef.current;
-    if (element === null || desktopBrowser === null) {
+    if (element === null || desktopBrowser === null || !isOwner) {
       return;
     }
     const observer = new ResizeObserver(() => {
@@ -249,10 +257,10 @@ export function useNativeBrowserView({
     return () => {
       observer.disconnect();
     };
-  }, [desktopBrowser, syncBoundsIfChanged]);
+  }, [desktopBrowser, isOwner, syncBoundsIfChanged]);
 
   useEffect(() => {
-    if (desktopBrowser === null) {
+    if (desktopBrowser === null || !isOwner) {
       return;
     }
     window.addEventListener(
@@ -267,7 +275,7 @@ export function useNativeBrowserView({
       );
       window.removeEventListener("resize", syncBoundsIfChanged);
     };
-  }, [desktopBrowser, syncBoundsIfChanged]);
+  }, [desktopBrowser, isOwner, syncBoundsIfChanged]);
 
   const supportsNativePaneFocus =
     desktopBrowser?.focus !== undefined &&
@@ -279,6 +287,7 @@ export function useNativeBrowserView({
   const isAttached =
     attachedIdentity !== null &&
     attachedIdentity.environmentId === environmentId &&
+    attachedIdentity.generation === generation &&
     attachedIdentity.ownerId === ownerId &&
     attachedIdentity.viewId === viewId;
   const [isClipped, setIsClipped] = useState(false);
@@ -287,6 +296,7 @@ export function useNativeBrowserView({
   const isClippedRef = useRef(isClipped);
   isClippedRef.current = isClipped;
   const isPlacementTracked =
+    isOwner &&
     desktopBrowser !== null &&
     canShow &&
     (canHandleBrowserCommands || supportsNativePaneFocus) &&
@@ -350,7 +360,7 @@ export function useNativeBrowserView({
   }, [checkPlacement, isPlacementTracked]);
 
   useLayoutEffect(() => {
-    if (visibilityCoordinator === null) {
+    if (visibilityCoordinator === null || !isOwner) {
       return;
     }
     if (!isVisible) {
@@ -370,7 +380,14 @@ export function useNativeBrowserView({
       }
       visibilityCoordinator.hide(viewId);
     };
-  }, [desktopBrowser, isVisible, syncBounds, viewId, visibilityCoordinator]);
+  }, [
+    desktopBrowser,
+    isOwner,
+    isVisible,
+    syncBounds,
+    viewId,
+    visibilityCoordinator,
+  ]);
 
   return {
     desktopBrowser,
@@ -384,5 +401,7 @@ export function useNativeBrowserView({
     pageLoadErrorText,
     isVisible,
     isDimmed,
+    isOwner,
+    claim,
   };
 }

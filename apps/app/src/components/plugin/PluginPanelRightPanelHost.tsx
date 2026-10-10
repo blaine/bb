@@ -65,6 +65,7 @@ import {
   useTerminals,
 } from "@/hooks/queries/thread-terminal-queries";
 import { usePanelBrowser } from "@/components/secondary-panel/usePanelBrowser";
+import { BrowserTabLifecycleObserver } from "@/components/secondary-panel/BrowserTabLifecycleObserver";
 import { usePanelFiles } from "@/components/secondary-panel/usePanelFiles";
 import { usePanelTerminals } from "@/components/secondary-panel/usePanelTerminals";
 import { useHosts } from "@/hooks/queries/host-queries";
@@ -1164,6 +1165,10 @@ export function PluginPanelRightPanelHost({
 
   return (
     <UrlOpenRoutingProvider openInAppBrowser={openBrowser}>
+      <BrowserTabLifecycleObserver
+        browserTabs={browserTabs}
+        threadId={panelStateId}
+      />
       <AppNavigationHostProvider capabilities={navigationCapabilities}>
         <PluginDetailRouteNavigationProvider
           onOpenPluginDetail={openPluginDetail}

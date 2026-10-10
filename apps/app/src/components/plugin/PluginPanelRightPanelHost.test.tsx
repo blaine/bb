@@ -41,6 +41,7 @@ import { openPluginDetailsInWorkspace } from "./plugin-detail-opener";
 import { getPluginPagePanelStateId } from "./plugin-page-panel-state";
 import { useAppNavigationHost } from "@/lib/app-navigation-host";
 import { makeTerminalSession } from "@/test/fixtures/terminal-sessions";
+import { createNoopDesktopBrowserApi } from "@/test/bb-desktop-test-utils";
 import {
   getPluginFixedTabOwnerId,
   useAppFixedTabTarget,
@@ -83,7 +84,10 @@ interface TestNewThreadPanelActionRegistration {
   generation: number;
 }
 
-const browserState = vi.hoisted(() => ({ available: false }));
+const browserState = vi.hoisted(() => ({
+  available: false,
+  api: null as import("@bb/desktop-contract").BbDesktopBrowserApi | null,
+}));
 const appCommandHandlers = vi.hoisted(
   () =>
     new Map<
@@ -258,7 +262,7 @@ vi.mock("@/lib/file-opener-preference", () => ({
 }));
 
 vi.mock("@/lib/bb-desktop", () => ({
-  getDesktopBrowserApi: () => null,
+  getDesktopBrowserApi: () => browserState.api,
   isDesktopBrowserAvailable: () => browserState.available,
 }));
 
@@ -522,6 +526,7 @@ vi.mock("@/components/secondary-panel/BrowserTabDeck", () => ({
     activeBrowserTabId === null ? null : (
       <div
         data-testid="plugin-page-browser"
+        data-active-tab-id={activeBrowserTabId}
         data-address-focus-requested={
           addressFocusRequest?.tabId === activeBrowserTabId
         }
@@ -750,6 +755,7 @@ describe("PluginPanelRightPanelHost", () => {
     appCommandHandlers.clear();
     resetRecentlyClosedPanelTabsForTest();
     browserState.available = false;
+    browserState.api = null;
     viewportState.isCompactViewport = false;
     createTerminal.mockReset();
     createTerminal.mockResolvedValue({ id: "terminal-1" });
@@ -1414,6 +1420,26 @@ describe("PluginPanelRightPanelHost", () => {
     ).toBeTruthy();
     expect(screen.queryByTestId("plugin-page-new-tab")).toBeNull();
     expect(screen.queryByTestId("plugin-page-browser")).toBeNull();
+  });
+
+  it("detaches a Browser tab's native view when the tab closes", async () => {
+    const detach = vi.fn();
+    browserState.available = true;
+    browserState.api = { ...createNoopDesktopBrowserApi(), detach };
+    renderHost();
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Show right panel" }),
+    );
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Open browser" }),
+    );
+    const tabId = (
+      await screen.findByTestId("plugin-page-browser")
+    ).getAttribute("data-active-tab-id");
+    expect(tabId).toMatch(/^browser:/u);
+    expect(detach).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: "Close Browser" }));
+    await waitFor(() => expect(detach).toHaveBeenCalledWith(tabId));
   });
 
   it("closes an open panel when refresh leaves no persisted tabs", async () => {

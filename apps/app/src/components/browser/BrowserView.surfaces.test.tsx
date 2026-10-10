@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import type { BrowserFixedPanelTab } from "@/lib/fixed-panel-tabs-state";
 import { BrowserTabDeck } from "@/components/secondary-panel/BrowserTabDeck";
 import { resetBrowserViewPersistence } from "@/components/secondary-panel/browserViewVisibilityCoordinator";
+import { resetBrowserViewMountsForTest } from "./browserViewMounts";
 import { getPluginPagePanelStateId } from "@/components/plugin/plugin-page-panel-state";
 import {
   BROWSER_DIMMING_OVERLAYS,
@@ -79,6 +80,7 @@ beforeEach(() => {
 afterEach(() => {
   cleanup();
   resetBrowserViewPersistence();
+  resetBrowserViewMountsForTest();
   window.localStorage.clear();
   delete window.bbDesktop;
   Object.defineProperty(Element.prototype, "getBoundingClientRect", {

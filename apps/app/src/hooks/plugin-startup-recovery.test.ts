@@ -65,6 +65,7 @@ it.each(["initial connect", "reconnect", "reload notification"])(
       resetCrashedSlots: () => {},
       setRegistrations: register,
       removeRegistrations: () => {},
+      closePluginBrowserViews: () => {},
       beginSlotBatch: () => () => {},
       warn: () => {},
       routePluginId: () => null,

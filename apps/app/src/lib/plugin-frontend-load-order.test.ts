@@ -60,6 +60,7 @@ function makeDeps(
     resetCrashedSlots: vi.fn(),
     setRegistrations: vi.fn(),
     removeRegistrations: vi.fn(),
+    closePluginBrowserViews: vi.fn(),
     warn: vi.fn(),
     routePluginId: () => null,
     beginSlotBatch: () => () => {},
