@@ -126,6 +126,19 @@ describe("surface cross-references", () => {
 });
 
 describe("surface card copy", () => {
+  it("lists the browser view on the host components card", () => {
+    expect(SURFACES_BY_ID.get("host-components")?.apiSymbols).toEqual(
+      expect.arrayContaining([
+        "experimental_BrowserView",
+        "ExperimentalBrowserViewProps",
+        "ExperimentalBrowserViewNavigation",
+        "ExperimentalBrowserViewOpenTabRequest",
+        "experimental_useBrowserViews",
+        "ExperimentalBrowserViews",
+      ]),
+    );
+  });
+
   it("lists every environment orchestration symbol and lifecycle event", () => {
     const environmentProviders = SURFACES_BY_ID.get("environment-providers");
     expect(environmentProviders?.apiSymbols).toEqual(

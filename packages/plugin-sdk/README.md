@@ -49,6 +49,13 @@ the current host accepted the intent. Targets never infer an ambient workspace.
 The frontend harness records both methods and accepts `openFilePreview` and
 `openFileExternally` behavior options.
 
+Use `experimental_BrowserView` to show a live web page inside your own layout
+with bb's in-app browser and toolbar. Each `viewKey` is one page that stays
+alive while unmounted; `url` loads only when the page is created, and
+`experimental_useBrowserViews().close(viewKey)` discards it. New-tab links go
+to `onOpenTab`, or follow the current surface's link routing. The frontend
+harness renders an inert `bb-browser-view` placeholder.
+
 To show a terminal beside your UI, create it with `useSdk().terminals.create`
 in the thread, environment, or host directory you want, then call
 `useBbNavigate().experimental_openTerminal({ terminalId })`. It resolves

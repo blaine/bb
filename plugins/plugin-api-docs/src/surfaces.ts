@@ -1415,8 +1415,8 @@ export const SURFACE_GROUPS: SurfaceGroup[] = [
         bullets: [
           "Embed a thread, a new-thread prompt box, or a textarea with editable voice input",
           "Render Markdown, code, diffs, and file links, and copy text and save files, the way bb does",
-          "Add or override app icons",
-          "Match bb's styling with no extra work",
+          "Show a live web page with bb's in-app browser and toolbar",
+          "Add or override app icons, and match bb's styling with no extra work",
         ],
         apiSymbols: [
           "experimental_Icon",
@@ -1457,6 +1457,12 @@ export const SURFACE_GROUPS: SurfaceGroup[] = [
           "BbNavigate.openUrl",
           "BbNavigate.experimental_openFilePreview",
           "BbNavigate.experimental_openFileExternally",
+          "experimental_BrowserView",
+          "ExperimentalBrowserViewProps",
+          "ExperimentalBrowserViewNavigation",
+          "ExperimentalBrowserViewOpenTabRequest",
+          "experimental_useBrowserViews",
+          "ExperimentalBrowserViews",
         ],
         firstParty: [
           "Account Pooler [Experimental]",

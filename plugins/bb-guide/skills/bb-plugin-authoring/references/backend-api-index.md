@@ -28,6 +28,10 @@ Read the installed declarations for exact current signatures.
 - `DiffViewMode`
 - `ExperimentalAppPanel`
 - `ExperimentalAppPanelSurface`
+- `ExperimentalBrowserViewNavigation`
+- `ExperimentalBrowserViewOpenTabRequest`
+- `ExperimentalBrowserViewProps`
+- `ExperimentalBrowserViews`
 - `ExperimentalDesktopBrowserAcquireInput`
 - `ExperimentalDesktopBrowserCreateInput`
 - `ExperimentalDesktopBrowserLease`

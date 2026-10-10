@@ -148,6 +148,40 @@ className? }` —
   not, so code there renders unhighlighted rather than broken.
   Experimental: see `docs/api_to_audit.md`.
 
+- `experimental_BrowserView` — bb's native in-app browser for one page in
+  your own layout, such as a `navPanel` page's main area. Props
+  (`ExperimentalBrowserViewProps`):
+  `{ viewKey, url, chrome?, onNavigate?, onOpenTab?, className? }`.
+  `viewKey` is a stable key matching `[A-Za-z0-9_\-:.]{1,128}`; the same key
+  returns to the same live page without a reload. `url` must be HTTP(S) and
+  loads only when the view is first created; change `viewKey` to show another
+  page. An invalid key or a non-HTTP(S) URL renders an error card instead.
+  `chrome` is `"full"` (default, bb's toolbar) or `"none"`. `onNavigate`
+  receives `ExperimentalBrowserViewNavigation` `{ url, title }` on every page
+  state change. `onOpenTab` receives `ExperimentalBrowserViewOpenTabRequest`
+  `{ url }` for new-tab links; omit it to open them the way the current
+  surface opens links (a right-panel Browser tab when the surface has one and
+  the user opens links in bb, otherwise the external browser). For a tab
+  strip, render one `BrowserView` per tab and mount only the active one;
+  unmounted views stay alive.
+  `experimental_useBrowserViews()` returns `ExperimentalBrowserViews`
+  `{ close(viewKey) }`, which discards one of this plugin's pages. Views close
+  on `close(viewKey)`, when the window closes, and when the plugin is disabled
+  or uninstalled; reloading your bundle does not close them. Give the view a
+  bounded height: a view clipped by its scroll container hides, and one taller
+  than its container never shows. bb's own dialogs, popovers, dropdown, context
+  and select menus, and hover cards hide the view while open; overlays your
+  bundle renders itself do not. Web clients render Open in browser and Copy
+  link. The testing harness renders an inert `bb-browser-view` placeholder.
+  Agents and `bb browser` cannot see these views. Experimental: see
+  `docs/api_to_audit.md`.
+
+  ```tsx
+  import { experimental_BrowserView as BrowserView } from "@get-bb/plugin-sdk/app";
+
+  <BrowserView viewKey={tab.id} url={tab.url} onOpenTab={({ url }) => addTab(url)} />;
+  ```
+
 - `Markdown` — bb's chat-message markdown renderer (same typography,
   spacing, and code styling as timeline messages). Props:
   `{ content, className? }`. Use it wherever plugin UI quotes or previews

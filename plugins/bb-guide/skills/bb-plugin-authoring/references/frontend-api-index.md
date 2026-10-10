@@ -23,6 +23,7 @@ Read the installed SDK declarations for the exact current signatures.
 - `experimental_useCheckoutState`
 - `experimental_SourceCode`
 - `experimental_Diff`
+- `experimental_BrowserView` — bb's in-app browser for one page in your layout
 - `useRpc`
 - `useRealtime`
 - `useRealtimeConnectionState`
@@ -67,6 +68,7 @@ Read the installed SDK declarations for the exact current signatures.
 - `experimental_useCodeTheme`
 - `experimental_copyToClipboard`
 - `experimental_saveFile`
+- `experimental_useBrowserViews` — close this plugin's browser views
 
 ## Type exports
 
@@ -271,6 +273,10 @@ Read the installed SDK declarations for the exact current signatures.
 - `ExperimentalFileLocation`
 - `ExperimentalFileOpenOptions`
 - `ExperimentalFileLinkProps`
+- `ExperimentalBrowserViewProps`
+- `ExperimentalBrowserViewNavigation`
+- `ExperimentalBrowserViewOpenTabRequest`
+- `ExperimentalBrowserViews`
 - `ExperimentalAppPanelSurface`
 - `ExperimentalFixedTabTargetState`
 - `ExperimentalOpenFixedTabOptions`
