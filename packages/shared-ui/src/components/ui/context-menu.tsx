@@ -3,6 +3,7 @@ import * as ContextMenuPrimitive from "@radix-ui/react-context-menu";
 
 import { cn } from "../../lib/utils";
 import { usePortalScopeProps } from "../../lib/portal-scope";
+import { useBrowserDimmingModal } from "../../hooks/useBrowserDimmingModal";
 import { COARSE_POINTER_CHECK_SLOT_CLASS } from "./coarse-pointer-sizing.js";
 import {
   MENU_ITEM_LAST_HOVERED_CLASS,
@@ -78,7 +79,24 @@ type ContextMenuShortcutProps = React.HTMLAttributes<HTMLSpanElement>;
 
 const CONTEXT_MENU_LAYER_CLASS = "z-[70]";
 
-const ContextMenu = ContextMenuPrimitive.Root;
+function ContextMenu({
+  onOpenChange,
+  ...props
+}: React.ComponentProps<typeof ContextMenuPrimitive.Root>) {
+  const [open, setOpen] = React.useState(false);
+  useBrowserDimmingModal(open);
+  const handleOpenChange = React.useCallback(
+    (next: boolean) => {
+      setOpen(next);
+      onOpenChange?.(next);
+    },
+    [onOpenChange],
+  );
+  return (
+    <ContextMenuPrimitive.Root {...props} onOpenChange={handleOpenChange} />
+  );
+}
+
 const ContextMenuTrigger = ContextMenuPrimitive.Trigger;
 const ContextMenuGroup = ContextMenuPrimitive.Group;
 const ContextMenuPortal = ContextMenuPrimitive.Portal;

@@ -3,6 +3,7 @@ import * as DropdownMenuPrimitive from "@radix-ui/react-dropdown-menu";
 
 import { cn } from "../../lib/utils";
 import { usePortalScopeProps } from "../../lib/portal-scope";
+import { useBrowserDimmingModal } from "../../hooks/useBrowserDimmingModal";
 import { COARSE_POINTER_CHECK_SLOT_CLASS } from "./coarse-pointer-sizing.js";
 import {
   type ResponsiveOverlayContextValue,
@@ -57,6 +58,7 @@ function DropdownMenu({
     controlledOnChange,
     defaultOpen,
   );
+  useBrowserDimmingModal(ctx.open);
 
   if (ctx.isCompactViewport) {
     return (

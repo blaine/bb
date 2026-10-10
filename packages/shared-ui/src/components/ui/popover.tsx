@@ -3,6 +3,7 @@ import * as PopoverPrimitive from "@radix-ui/react-popover";
 
 import { cn } from "../../lib/utils";
 import { usePortalScopeProps } from "../../lib/portal-scope";
+import { useBrowserDimmingModal } from "../../hooks/useBrowserDimmingModal";
 import {
   type ResponsiveOverlayContextValue,
   COMPACT_SHEET_CONTENT_STYLE,
@@ -42,6 +43,7 @@ function Popover({
     controlledOnChange,
     defaultOpen,
   );
+  useBrowserDimmingModal(ctx.open);
 
   if (ctx.isCompactViewport) {
     return (

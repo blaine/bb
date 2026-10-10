@@ -3,6 +3,7 @@ import * as SelectPrimitive from "@radix-ui/react-select";
 
 import { cn } from "../../lib/utils";
 import { usePortalScopeProps } from "../../lib/portal-scope";
+import { useBrowserDimmingModal } from "../../hooks/useBrowserDimmingModal";
 import { CONTROL_HOVER_TRANSITION } from "./motion.js";
 import { Icon } from "../../components/ui/icon.js";
 import { COARSE_POINTER_CHECK_SLOT_CLASS } from "./coarse-pointer-sizing.js";
@@ -99,6 +100,7 @@ function Select({
   const listboxId = React.useId();
   const [trigger, setTrigger] = React.useState<HTMLButtonElement | null>(null);
   const { isCompactViewport, open, onOpenChange } = overlay;
+  useBrowserDimmingModal(open);
 
   const compact = React.useMemo<CompactSelectContextValue | null>(() => {
     if (!isCompactViewport) return null;

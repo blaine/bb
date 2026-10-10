@@ -2,8 +2,32 @@ import * as React from "react";
 import * as HoverCardPrimitive from "@radix-ui/react-hover-card";
 
 import { cn } from "../../lib/utils";
+import { useBrowserDimmingModal } from "../../hooks/useBrowserDimmingModal";
 
-const HoverCard = HoverCardPrimitive.Root;
+function HoverCard({
+  open: controlledOpen,
+  defaultOpen = false,
+  onOpenChange,
+  ...props
+}: React.ComponentProps<typeof HoverCardPrimitive.Root>) {
+  const [uncontrolledOpen, setUncontrolledOpen] = React.useState(defaultOpen);
+  const open = controlledOpen ?? uncontrolledOpen;
+  useBrowserDimmingModal(open);
+  const handleOpenChange = React.useCallback(
+    (next: boolean) => {
+      if (controlledOpen === undefined) setUncontrolledOpen(next);
+      onOpenChange?.(next);
+    },
+    [controlledOpen, onOpenChange],
+  );
+  return (
+    <HoverCardPrimitive.Root
+      {...props}
+      open={open}
+      onOpenChange={handleOpenChange}
+    />
+  );
+}
 
 const HoverCardTrigger = HoverCardPrimitive.Trigger;
 
