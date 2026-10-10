@@ -61,6 +61,7 @@ function makeDeps(
     setRegistrations: vi.fn(),
     removeRegistrations: vi.fn(),
     closePluginBrowserViews: vi.fn(),
+    clearPluginOpenTabListeners: vi.fn(),
     warn: vi.fn(),
     routePluginId: () => null,
     beginSlotBatch: () => () => {},

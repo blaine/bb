@@ -66,6 +66,7 @@ it.each(["initial connect", "reconnect", "reload notification"])(
       setRegistrations: register,
       removeRegistrations: () => {},
       closePluginBrowserViews: () => {},
+      clearPluginOpenTabListeners: () => {},
       beginSlotBatch: () => () => {},
       warn: () => {},
       routePluginId: () => null,

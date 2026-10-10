@@ -2180,7 +2180,8 @@ the link preference opens links in bb (the default), otherwise the external
 browser. `experimental_useBrowserViews().onOpenTab(listener)` receives `{
 viewKey, url }` for new-tab requests from every one of the plugin's views,
 mounted or not, through one shared desktop subscription, and returns its
-unsubscribe function. While a plugin has a listener, its views without an
+unsubscribe function (safe to call twice). Listeners are dropped whenever the
+plugin's frontend generation is disposed: bundle reload, disable, uninstall. While a plugin has a listener, its views without an
 `onOpenTab` prop skip the default routing; a view's own `onOpenTab` still
 runs. Unmounting hides the view and keeps it alive. It closes on window
 close, on `experimental_useBrowserViews().close(viewKey)`, and when the plugin

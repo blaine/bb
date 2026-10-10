@@ -3847,10 +3847,6 @@ export interface ExperimentalBrowserViewProps {
   className?: string;
 }
 
-/**
- * Controller for the calling plugin's browser views. Experimental: see
- * docs/api_to_audit.md.
- */
 /** A page in one of this plugin's browser views asked to open a new tab. */
 export interface ExperimentalBrowserViewsOpenTabRequest {
   /** The `viewKey` of the view whose page made the request. */
@@ -3859,6 +3855,10 @@ export interface ExperimentalBrowserViewsOpenTabRequest {
   url: string;
 }
 
+/**
+ * Controller for the calling plugin's browser views. Experimental: see
+ * docs/api_to_audit.md.
+ */
 export interface ExperimentalBrowserViews {
   /**
    * Close one of this plugin's views and discard its page. A view with that
@@ -3872,7 +3872,10 @@ export interface ExperimentalBrowserViews {
    * tabs never misses a request from a page it just hid. While at least one
    * listener is registered, views without an `onOpenTab` prop skip bb's
    * default new-tab routing; a view's own `onOpenTab` is still called. Returns
-   * the unsubscribe function. Without the desktop browser it never fires.
+   * the unsubscribe function, which is safe to call more than once. Listeners
+   * are dropped when the plugin's frontend bundle reloads or the plugin is
+   * disabled, so register them from mounted UI. Without the desktop browser it
+   * never fires.
    */
   onOpenTab(
     listener: (request: ExperimentalBrowserViewsOpenTabRequest) => void,

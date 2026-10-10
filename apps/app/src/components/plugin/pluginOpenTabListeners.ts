@@ -7,8 +7,15 @@ import {
 
 type OpenTabListener = (request: ExperimentalBrowserViewsOpenTabRequest) => void;
 
-const listenersByPlugin = new Map<string, Set<OpenTabListener>>();
-let desktopSubscription: { desktopBrowser: BbDesktopBrowserApi; unsubscribe: () => void } | null = null;
+interface Registration {
+  listener: OpenTabListener;
+}
+
+const registrationsByPlugin = new Map<string, Set<Registration>>();
+let desktopSubscription: {
+  desktopBrowser: BbDesktopBrowserApi;
+  unsubscribe: () => void;
+} | null = null;
 
 function viewKeyForPlugin(pluginId: string, tabId: string): string | null {
   const prefix = `${pluginBrowserViewOwnerId(pluginId)}:`;
@@ -18,10 +25,12 @@ function viewKeyForPlugin(pluginId: string, tabId: string): string | null {
 }
 
 function dispatch({ tabId, url }: { tabId: string; url: string }): void {
-  for (const [pluginId, listeners] of listenersByPlugin) {
+  for (const [pluginId, registrations] of registrationsByPlugin) {
     const viewKey = viewKeyForPlugin(pluginId, tabId);
     if (viewKey === null) continue;
-    for (const listener of [...listeners]) listener({ viewKey, url });
+    for (const registration of [...registrations]) {
+      if (registrations.has(registration)) registration.listener({ viewKey, url });
+    }
   }
 }
 
@@ -29,17 +38,18 @@ function ensureDesktopSubscription(desktopBrowser: BbDesktopBrowserApi): void {
   if (desktopSubscription?.desktopBrowser === desktopBrowser) return;
   desktopSubscription?.unsubscribe();
   const unsubscribe = desktopBrowser.onScopedOpenTab?.(dispatch);
-  desktopSubscription = unsubscribe === undefined ? null : { desktopBrowser, unsubscribe };
+  desktopSubscription =
+    unsubscribe === undefined ? null : { desktopBrowser, unsubscribe };
 }
 
 function releaseDesktopSubscriptionIfUnused(): void {
-  if (listenersByPlugin.size > 0) return;
+  if (registrationsByPlugin.size > 0) return;
   desktopSubscription?.unsubscribe();
   desktopSubscription = null;
 }
 
 export function hasPluginOpenTabListener(pluginId: string): boolean {
-  return (listenersByPlugin.get(pluginId)?.size ?? 0) > 0;
+  return (registrationsByPlugin.get(pluginId)?.size ?? 0) > 0;
 }
 
 export function addPluginOpenTabListener({
@@ -54,13 +64,28 @@ export function addPluginOpenTabListener({
   if (desktopBrowser === null || desktopBrowser.onScopedOpenTab === undefined) {
     return () => {};
   }
-  const listeners = listenersByPlugin.get(pluginId) ?? new Set<OpenTabListener>();
-  listeners.add(listener);
-  listenersByPlugin.set(pluginId, listeners);
+  const registrations =
+    registrationsByPlugin.get(pluginId) ?? new Set<Registration>();
+  const registration: Registration = { listener };
+  registrations.add(registration);
+  registrationsByPlugin.set(pluginId, registrations);
   ensureDesktopSubscription(desktopBrowser);
   return () => {
-    listeners.delete(listener);
-    if (listeners.size === 0) listenersByPlugin.delete(pluginId);
+    if (!registrations.delete(registration)) return;
+    if (
+      registrations.size === 0 &&
+      registrationsByPlugin.get(pluginId) === registrations
+    ) {
+      registrationsByPlugin.delete(pluginId);
+    }
     releaseDesktopSubscriptionIfUnused();
   };
+}
+
+export function clearPluginOpenTabListeners(pluginId: string): void {
+  const registrations = registrationsByPlugin.get(pluginId);
+  if (registrations === undefined) return;
+  registrations.clear();
+  registrationsByPlugin.delete(pluginId);
+  releaseDesktopSubscriptionIfUnused();
 }

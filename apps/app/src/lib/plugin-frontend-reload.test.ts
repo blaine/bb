@@ -110,6 +110,7 @@ interface TestReconcileDeps extends PluginFrontendReconcileDeps {
   removeRegistrations: Mock<typeof removePluginSlotRegistrations>;
   setRegistrations: Mock<typeof setPluginSlotRegistrations>;
   closePluginBrowserViews: Mock<(pluginId: string) => void>;
+  clearPluginOpenTabListeners: Mock<(pluginId: string) => void>;
 }
 
 function makeDeps(initial: PluginFrontendCandidate[] = []): TestReconcileDeps {
@@ -126,6 +127,7 @@ function makeDeps(initial: PluginFrontendCandidate[] = []): TestReconcileDeps {
     setRegistrations: vi.fn(),
     removeRegistrations: vi.fn(),
     closePluginBrowserViews: vi.fn(),
+    clearPluginOpenTabListeners: vi.fn(),
     beginSlotBatch: () => () => {},
     warn: vi.fn(),
     routePluginId: () => null,
@@ -252,6 +254,7 @@ describe("reconcilePluginFrontends", () => {
       setRegistrations: setPluginSlotRegistrations,
       removeRegistrations: removePluginSlotRegistrations,
       closePluginBrowserViews: () => {},
+      clearPluginOpenTabListeners: () => {},
       beginSlotBatch: () => () => {},
       warn: vi.fn(),
       routePluginId: () => null,
@@ -454,6 +457,19 @@ describe("reconcilePluginFrontends", () => {
     expect(deps.applyCss).toHaveBeenLastCalledWith("hello", null);
     expect(state.records.has("hello")).toBe(false);
     expect(state.appliedHashes.has("hello")).toBe(false);
+  });
+
+  it("clears a plugin's open-tab listeners when its generation is replaced or removed", async () => {
+    const state = createPluginFrontendReconcileState();
+    const deps = makeDeps([candidate("hello", "v1")]);
+    await reconcilePluginFrontends(state, deps);
+    expect(deps.clearPluginOpenTabListeners).not.toHaveBeenCalled();
+    deps.fetchCandidates.mockResolvedValue([candidate("hello", "v2")]);
+    await reconcilePluginFrontends(state, deps);
+    expect(deps.clearPluginOpenTabListeners).toHaveBeenCalledWith("hello");
+    deps.fetchCandidates.mockResolvedValue([]);
+    await reconcilePluginFrontends(state, deps);
+    expect(deps.clearPluginOpenTabListeners).toHaveBeenCalledTimes(2);
   });
 
   it("closes a plugin's browser views when it leaves the inventory but not when its bundle reloads", async () => {

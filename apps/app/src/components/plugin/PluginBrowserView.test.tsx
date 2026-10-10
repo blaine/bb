@@ -31,6 +31,7 @@ import {
 } from "@/test/recording-desktop-browser-api";
 import { LazyPluginBrowserView } from "./LazyPluginBrowserView";
 import { PluginContext } from "./plugin-context";
+import { clearPluginOpenTabListeners } from "./pluginOpenTabListeners";
 
 const PluginSdkBrowserView =
   pluginSdkAppImplementation.experimental_BrowserView;
@@ -79,6 +80,7 @@ beforeEach(() => {
 
 afterEach(() => {
   cleanup();
+  clearPluginOpenTabListeners("acme");
   resetBrowserViewPersistence();
   resetBrowserViewMountsForTest();
   window.localStorage.clear();
@@ -284,6 +286,88 @@ describe("experimental_useBrowserViews", () => {
     });
     expect(onOpenTab.mock.calls).toEqual([[{ url: "https://link.example/" }]]);
     expect(received).toHaveLength(1);
+  });
+
+  it("keeps a later listener when an earlier unsubscribe runs twice", () => {
+    const received: string[] = [];
+    let stopFirst: () => void = () => {};
+    let stopSecond: () => void = () => {};
+    function Subscriber() {
+      const views = pluginSdkAppImplementation.experimental_useBrowserViews();
+      useEffect(() => {
+        stopFirst = views.onOpenTab(() => received.push("first"));
+      }, [views]);
+      return null;
+    }
+    render(
+      <PluginSurface>
+        <Subscriber />
+      </PluginSurface>,
+    );
+    act(() => stopFirst());
+    function Second() {
+      const views = pluginSdkAppImplementation.experimental_useBrowserViews();
+      useEffect(() => {
+        stopSecond = views.onOpenTab(() => received.push("second"));
+      }, [views]);
+      return null;
+    }
+    render(
+      <PluginSurface>
+        <Second />
+      </PluginSurface>,
+    );
+    act(() => stopFirst());
+    act(() => {
+      browser.emitScopedOpenTab({ tabId: VIEW_ID, url: "https://link.example/" });
+    });
+    expect(received).toEqual(["second"]);
+    act(() => stopSecond());
+  });
+
+  it("needs one unsubscribe per registration of the same listener", () => {
+    const received: string[] = [];
+    const listener = () => received.push("hit");
+    let stops: Array<() => void> = [];
+    function Subscriber() {
+      const views = pluginSdkAppImplementation.experimental_useBrowserViews();
+      useEffect(() => {
+        stops = [views.onOpenTab(listener), views.onOpenTab(listener)];
+      }, [views]);
+      return null;
+    }
+    render(
+      <PluginSurface>
+        <Subscriber />
+      </PluginSurface>,
+    );
+    act(() => stops[0]?.());
+    act(() => {
+      browser.emitScopedOpenTab({ tabId: VIEW_ID, url: "https://link.example/" });
+    });
+    expect(received).toEqual(["hit"]);
+    act(() => stops[1]?.());
+  });
+
+  it("drops a plugin's listeners when its frontend is torn down", () => {
+    const received: string[] = [];
+    function Subscriber() {
+      const views = pluginSdkAppImplementation.experimental_useBrowserViews();
+      useEffect(() => {
+        views.onOpenTab(() => received.push("hit"));
+      }, [views]);
+      return null;
+    }
+    render(
+      <PluginSurface>
+        <Subscriber />
+      </PluginSurface>,
+    );
+    act(() => clearPluginOpenTabListeners("acme"));
+    act(() => {
+      browser.emitScopedOpenTab({ tabId: VIEW_ID, url: "https://link.example/" });
+    });
+    expect(received).toEqual([]);
   });
 
   it("stops delivering after unsubscribe and restores default routing", async () => {
