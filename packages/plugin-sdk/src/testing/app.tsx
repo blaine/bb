@@ -93,6 +93,8 @@ import {
   type StandardSchemaV1InferInput,
   type MarkdownProps,
   type UrlLinkProps,
+  type ExperimentalBrowserViewProps,
+  type ExperimentalBrowserViews,
   type ExperimentalFileLinkProps,
   type ExperimentalFileOpenOptions,
   type ExperimentalAppPanel,
@@ -1182,6 +1184,27 @@ function TestSourceCode({
  * Stand-in for the host-owned diff viewer: emits the raw patch in a
  * recognizable wrapper carrying the resolved presentation.
  */
+function TestBrowserView({
+  viewKey,
+  url,
+  chrome = "full",
+  className,
+}: ExperimentalBrowserViewProps) {
+  return (
+    <div
+      data-testid="bb-browser-view"
+      data-view-key={viewKey}
+      data-url={url}
+      data-chrome={chrome}
+      className={className}
+    />
+  );
+}
+
+const INERT_BROWSER_VIEWS: ExperimentalBrowserViews = Object.freeze({
+  close() {},
+});
+
 function TestDiff({
   patch,
   path,
@@ -1370,6 +1393,10 @@ const testPluginSdkApp = {
   },
   experimental_SourceCode: TestSourceCode,
   experimental_Diff: TestDiff,
+  experimental_BrowserView: TestBrowserView,
+  experimental_useBrowserViews(): ExperimentalBrowserViews {
+    return INERT_BROWSER_VIEWS;
+  },
   experimental_useSidebarThreads(): PluginSidebarThreadsState {
     return useSlotEnv("experimental_useSidebarThreads").sidebarThreads;
   },

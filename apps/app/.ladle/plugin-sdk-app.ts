@@ -18,6 +18,8 @@ export const {
   experimental_useCheckoutState,
   experimental_SourceCode,
   experimental_Diff,
+  experimental_BrowserView,
+  experimental_useBrowserViews,
   useRpc,
   useRealtime,
   useRealtimeConnectionState,

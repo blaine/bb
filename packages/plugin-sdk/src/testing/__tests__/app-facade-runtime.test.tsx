@@ -3,8 +3,10 @@ import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import {
   definePluginApp,
+  experimental_BrowserView,
   experimental_Icon,
   experimental_usePluginId,
+  experimental_useBrowserViews,
   experimental_useQuestionFormHost,
   useBbContext,
 } from "../../app.js";
@@ -17,6 +19,7 @@ interface RuntimeHost {
 const host = globalThis as RuntimeHost;
 const runtimeAtImport = host.__bbPluginRuntime;
 const Icon = experimental_Icon;
+const BrowserView = experimental_BrowserView;
 
 afterEach(() => {
   cleanup();
@@ -108,6 +111,25 @@ describe("@get-bb/plugin-sdk/app without a runtime at import time", () => {
       ),
     ).toBeTruthy();
     expect(chosen).toEqual([]);
+  });
+
+  it("renders an inert browser view placeholder with a no-op close", () => {
+    function BrowserProbe() {
+      const views = experimental_useBrowserViews();
+      views.close("inbox");
+      return (
+        <BrowserView
+          viewKey="inbox"
+          url="https://mail.example/"
+          chrome="none"
+        />
+      );
+    }
+    renderSlot({ component: BrowserProbe }, {});
+    const placeholder = screen.getByTestId("bb-browser-view");
+    expect(placeholder.dataset.viewKey).toBe("inbox");
+    expect(placeholder.dataset.url).toBe("https://mail.example/");
+    expect(placeholder.dataset.chrome).toBe("none");
   });
 
   it("renders a component through the runtime's React", () => {

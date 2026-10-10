@@ -14,6 +14,8 @@ import { PluginProviderModelPicker } from "@/components/plugin/PluginProviderMod
 import { PluginPermissionModePicker } from "@/components/plugin/PluginPermissionModePicker";
 import { PluginSourceCode } from "@/components/plugin/PluginSourceCode";
 import { LazyPluginThreadChat } from "@/components/plugin/LazyPluginThreadChat";
+import { LazyPluginBrowserView } from "@/components/plugin/LazyPluginBrowserView";
+import { usePluginBrowserViews } from "@/components/plugin/usePluginBrowserViews";
 import { PluginThreadTitle } from "@/components/plugin/PluginThreadTitle";
 import { ThreadStatusGlyph } from "@/components/thread/ThreadStatusGlyph";
 import { PluginUrlLink } from "@/components/plugin/PluginUrlLink";
@@ -113,6 +115,8 @@ export const pluginSdkAppImplementation = {
   experimental_useCheckoutState: usePluginCheckoutState,
   experimental_SourceCode: PluginSourceCode,
   experimental_Diff: PluginDiff,
+  experimental_BrowserView: LazyPluginBrowserView,
+  experimental_useBrowserViews: usePluginBrowserViews,
   experimental_useSidebarThreads: useSidebarThreads,
   experimental_useSidebarThreadActions: useSidebarThreadActions,
   experimental_useThreadActions: useThreadActionEntries,

@@ -66,6 +66,10 @@ import {
 } from "@/hooks/queries/thread-terminal-queries";
 import { usePanelBrowser } from "@/components/secondary-panel/usePanelBrowser";
 import { BrowserTabLifecycleObserver } from "@/components/secondary-panel/BrowserTabLifecycleObserver";
+import {
+  BrowserViewHostContext,
+  type BrowserViewHost,
+} from "@/components/browser/BrowserViewHostContext";
 import { usePanelFiles } from "@/components/secondary-panel/usePanelFiles";
 import { usePanelTerminals } from "@/components/secondary-panel/usePanelTerminals";
 import { useHosts } from "@/hooks/queries/host-queries";
@@ -1097,6 +1101,13 @@ export function PluginPanelRightPanelHost({
 
   const toggleLabel = isOpen ? "Hide right panel" : "Show right panel";
   const toggleIconName = RIGHT_PANEL_TOGGLE_ICON_NAME;
+  const mainBrowserViewHost = useMemo<BrowserViewHost>(
+    () => ({
+      canShowNativeBrowserView:
+        !(isCompactViewport && isOpen) && !isPanelFullPage,
+    }),
+    [isCompactViewport, isOpen, isPanelFullPage],
+  );
   const page = (
     <div
       className={`flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden ${
@@ -1120,7 +1131,11 @@ export function PluginPanelRightPanelHost({
           active: isPanelFullPage,
           onToggle: () => setIsPanelFullPage((current) => !current),
         }}
-        main={children}
+        main={
+          <BrowserViewHostContext.Provider value={mainBrowserViewHost}>
+            {children}
+          </BrowserViewHostContext.Provider>
+        }
         composerHost={null}
         renderPanel={renderPanel}
       />

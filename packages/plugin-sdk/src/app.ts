@@ -145,6 +145,12 @@ export const experimental_SourceCode = runtimeComponent(
   "experimental_SourceCode",
 );
 export const experimental_Diff = runtimeComponent("experimental_Diff");
+export const experimental_BrowserView = runtimeComponent(
+  "experimental_BrowserView",
+);
+export const experimental_useBrowserViews = runtimeFunction(
+  "experimental_useBrowserViews",
+);
 export const useRpc = runtimeFunction("useRpc");
 export const useRealtime = runtimeFunction("useRealtime");
 export const useRealtimeConnectionState = runtimeFunction(

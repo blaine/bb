@@ -2,12 +2,15 @@
 
 import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import type { ReactElement } from "react";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import type { BrowserFixedPanelTab } from "@/lib/fixed-panel-tabs-state";
 import { BrowserTabDeck } from "@/components/secondary-panel/BrowserTabDeck";
 import { resetBrowserViewPersistence } from "@/components/secondary-panel/browserViewVisibilityCoordinator";
 import { resetBrowserViewMountsForTest } from "./browserViewMounts";
 import { getPluginPagePanelStateId } from "@/components/plugin/plugin-page-panel-state";
+import { PluginContext } from "@/components/plugin/plugin-context";
+import { LazyPluginBrowserView } from "@/components/plugin/LazyPluginBrowserView";
+import { pluginSdkAppImplementation } from "@/lib/plugin-sdk-app-impl";
 import {
   BROWSER_DIMMING_OVERLAYS,
   DIALOG_OVERLAY,
@@ -20,6 +23,8 @@ import {
 
 const CONTRACT_URL = "https://example.com/contract";
 const SLOT_RECT = new DOMRect(12, 24, 420, 260);
+const PluginMainAreaBrowserView =
+  pluginSdkAppImplementation.experimental_BrowserView;
 
 interface BrowserSurfaceCase {
   name: string;
@@ -66,9 +71,23 @@ const BROWSER_SURFACES: readonly BrowserSurfaceCase[] = [
     getPluginPagePanelStateId({ pluginId: "acme", panelPath: "inbox" }),
     null,
   ),
+  {
+    name: "plugin page main area",
+    viewId: "plugin-view:acme:inbox",
+    ownerId: "plugin-view:acme",
+    element: () => (
+      <PluginContext.Provider value="acme">
+        <PluginMainAreaBrowserView viewKey="inbox" url={CONTRACT_URL} />
+      </PluginContext.Provider>
+    ),
+  },
 ];
 
 const originalGetBoundingClientRect = Element.prototype.getBoundingClientRect;
+
+beforeAll(async () => {
+  await LazyPluginBrowserView.preload();
+});
 
 beforeEach(() => {
   Object.defineProperty(Element.prototype, "getBoundingClientRect", {

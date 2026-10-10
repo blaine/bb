@@ -3790,6 +3790,70 @@ export interface ExperimentalFileLinkProps extends Omit<
   location?: ExperimentalFileLocation | null;
 }
 
+/**
+ * Live page state a browser view reports while the user browses.
+ * Experimental: see docs/api_to_audit.md.
+ */
+export interface ExperimentalBrowserViewNavigation {
+  url: string;
+  title: string | null;
+}
+
+/**
+ * A link the page asked to open in a new tab. Experimental: see
+ * docs/api_to_audit.md.
+ */
+export interface ExperimentalBrowserViewOpenTabRequest {
+  url: string;
+}
+
+/**
+ * Props of the host-owned `experimental_BrowserView` component: bb's native
+ * in-app browser for one page, laid out by the plugin. Unmounting hides the
+ * page and keeps it alive, so the same `viewKey` returns to it without a
+ * reload. The page closes when the window closes, when
+ * `experimental_useBrowserViews().close(viewKey)` runs, or when the plugin is
+ * disabled or uninstalled. Web clients render Open in browser and Copy link
+ * instead. Experimental: see docs/api_to_audit.md.
+ */
+export interface ExperimentalBrowserViewProps {
+  /**
+   * Stable plugin-chosen identity matching `[A-Za-z0-9_\-:.]{1,128}`. An
+   * invalid key renders an error card instead of a page.
+   */
+  viewKey: string;
+  /**
+   * HTTP(S) URL loaded when the view is first created. Later changes are
+   * ignored; use another `viewKey` to show another page. Other schemes
+   * render an error card.
+   */
+  url: string;
+  /** `"full"` (default) shows bb's browser toolbar; `"none"` shows only the page. */
+  chrome?: "full" | "none";
+  /** Called with the live URL and title whenever the page state changes. */
+  onNavigate?: (navigation: ExperimentalBrowserViewNavigation) => void;
+  /**
+   * Called when the page opens a link in a new tab. When omitted, the link
+   * opens where the current surface opens links: a right-panel Browser tab
+   * when the surface has one and the user opens links in bb, otherwise the
+   * external browser.
+   */
+  onOpenTab?: (request: ExperimentalBrowserViewOpenTabRequest) => void;
+  className?: string;
+}
+
+/**
+ * Controller for the calling plugin's browser views. Experimental: see
+ * docs/api_to_audit.md.
+ */
+export interface ExperimentalBrowserViews {
+  /**
+   * Close one of this plugin's views and discard its page. A mounted view
+   * with that key reloads from its `url`. Invalid keys are ignored.
+   */
+  close(viewKey: string): void;
+}
+
 /** The panel surface resolved by the component making the request. */
 export type ExperimentalAppPanelSurface = { kind: "current" };
 
@@ -4315,6 +4379,17 @@ export interface PluginSdkApp {
    * docs/api_to_audit.md.
    */
   experimental_Diff: ComponentType<DiffProps>;
+  /**
+   * bb's native in-app browser for one page (see
+   * {@link ExperimentalBrowserViewProps}), the same view bb's right-panel
+   * Browser tab renders. Experimental: see docs/api_to_audit.md.
+   */
+  experimental_BrowserView: ComponentType<ExperimentalBrowserViewProps>;
+  /**
+   * Close the calling plugin's browser views. Experimental: see
+   * docs/api_to_audit.md.
+   */
+  experimental_useBrowserViews(): ExperimentalBrowserViews;
   /** @internal Superseded by `useComposer()`; kept for plugins built against older SDKs. */
   useComposerView(): ComposerView;
 }
