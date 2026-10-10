@@ -13,6 +13,7 @@ import {
 } from "@bb/desktop-contract";
 import {
   BB_DESKTOP_BROWSER_ATTACH_CHANNEL,
+  BB_DESKTOP_BROWSER_CAPTURE_SNAPSHOT_CHANNEL,
   BB_DESKTOP_BROWSER_DETACH_CHANNEL,
   BB_DESKTOP_BROWSER_EVALUATE_CHANNEL,
   BB_DESKTOP_BROWSER_FOCUS_CHANNEL,
@@ -126,6 +127,12 @@ export function registerDesktopBrowserIpc(
     bbDesktopBrowserTabRefSchema,
     ({ hostWindow, request }) =>
       manager.stop({ hostWindow, tabId: request.tabId }),
+  );
+  registerRequestCommand(
+    BB_DESKTOP_BROWSER_CAPTURE_SNAPSHOT_CHANNEL,
+    bbDesktopBrowserTabRefSchema,
+    ({ hostWindow, request }) =>
+      manager.captureSnapshot({ hostWindow, tabId: request.tabId }),
   );
   ipcMain.handle(
     BB_DESKTOP_BROWSER_EVALUATE_CHANNEL,

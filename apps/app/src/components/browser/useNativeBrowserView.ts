@@ -23,7 +23,7 @@ import {
 import {
   EMPTY_BROWSER_VIEW_BOUNDS,
   browserViewBoundsEqual,
-  browserViewBoundsFromElement,
+  readBrowserViewPlacement,
 } from "./browserViewPlacement";
 
 export interface BrowserViewOpenTabRequest {
@@ -134,7 +134,7 @@ export function useNativeBrowserView({
     if (element === null) {
       return null;
     }
-    return browserViewBoundsFromElement({ element });
+    return readBrowserViewPlacement(element).bounds;
   }, []);
 
   const sendBounds = useCallback(
@@ -281,26 +281,96 @@ export function useNativeBrowserView({
     attachedIdentity.environmentId === environmentId &&
     attachedIdentity.ownerId === ownerId &&
     attachedIdentity.viewId === viewId;
-  const isVisible =
+  const [isClipped, setIsClipped] = useState(false);
+  const isDimmedRef = useRef(isDimmed);
+  isDimmedRef.current = isDimmed;
+  const isClippedRef = useRef(isClipped);
+  isClippedRef.current = isClipped;
+  const isPlacementTracked =
+    desktopBrowser !== null &&
     canShow &&
     (canHandleBrowserCommands || supportsNativePaneFocus) &&
     hasPage &&
     pageLoadErrorText === null &&
     isAttached &&
     !isDimmed;
+  const isVisible = isPlacementTracked && !isClipped;
+
+  const checkPlacement = useCallback(() => {
+    const element = slotRef.current;
+    if (element === null) {
+      return;
+    }
+    const placement = readBrowserViewPlacement(element);
+    setIsClipped(placement.clipped);
+    if (placement.clipped) {
+      return;
+    }
+    const lastSentBounds = lastSentBoundsRef.current;
+    if (
+      lastSentBounds === null ||
+      !browserViewBoundsEqual({ a: lastSentBounds, b: placement.bounds })
+    ) {
+      sendBounds(placement.bounds);
+    }
+  }, [sendBounds]);
+
+  useEffect(() => {
+    if (!isPlacementTracked) {
+      return;
+    }
+    let frame: number | null = null;
+    const schedule = () => {
+      if (frame !== null) return;
+      frame = window.requestAnimationFrame(() => {
+        frame = null;
+        checkPlacement();
+      });
+    };
+    document.addEventListener("scroll", schedule, {
+      capture: true,
+      passive: true,
+    });
+    document.addEventListener("transitionend", schedule, true);
+    document.addEventListener("animationend", schedule, true);
+    const observer = new MutationObserver(schedule);
+    observer.observe(document.body, {
+      attributes: true,
+      childList: true,
+      subtree: true,
+    });
+    schedule();
+    return () => {
+      document.removeEventListener("scroll", schedule, { capture: true });
+      document.removeEventListener("transitionend", schedule, true);
+      document.removeEventListener("animationend", schedule, true);
+      observer.disconnect();
+      if (frame !== null) window.cancelAnimationFrame(frame);
+    };
+  }, [checkPlacement, isPlacementTracked]);
 
   useLayoutEffect(() => {
     if (visibilityCoordinator === null) {
       return;
     }
-    if (isVisible) {
-      visibilityCoordinator.show(viewId, syncBounds, { focus: false });
-      return () => {
-        visibilityCoordinator.hide(viewId);
-      };
+    if (!isVisible) {
+      visibilityCoordinator.hide(viewId);
+      return;
     }
-    visibilityCoordinator.hide(viewId);
-  }, [visibilityCoordinator, viewId, isVisible, syncBounds]);
+    const element = slotRef.current;
+    if (element !== null && readBrowserViewPlacement(element).clipped) {
+      setIsClipped(true);
+      return;
+    }
+    visibilityCoordinator.show(viewId, syncBounds, { focus: false });
+    setSnapshotUrl(null);
+    return () => {
+      if (isDimmedRef.current || isClippedRef.current) {
+        desktopBrowser?.captureSnapshot?.(viewId);
+      }
+      visibilityCoordinator.hide(viewId);
+    };
+  }, [desktopBrowser, isVisible, syncBounds, viewId, visibilityCoordinator]);
 
   return {
     desktopBrowser,

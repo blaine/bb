@@ -3979,6 +3979,46 @@ describe("DesktopBrowserViewManager", () => {
     expect(view.visible).toBe(false);
   });
 
+  it("captures an on-demand snapshot of a hidden view and drops one that resolves after it shows again", async () => {
+    const manager = createDesktopBrowserViewManager({
+      partition: "persist:test",
+    });
+    const hostWindow = new FakeHostWindow({
+      contentBounds: { width: 700, height: 450 },
+      webContentsId: 52,
+    });
+    const tabId = "plugin-view:acme:inbox";
+    manager.attach({
+      hostWindow,
+      request: {
+        threadId: "plugin-view:acme",
+        tabId,
+        url: "",
+        bounds: { x: 0, y: 0, width: 500, height: 350 },
+        visible: true,
+      },
+    });
+    const view = electronMock.fakeViews[0];
+    if (view === undefined) {
+      throw new Error("Expected the browser view to be created.");
+    }
+
+    manager.captureSnapshot({ hostWindow, tabId });
+    manager.setVisible({ hostWindow, request: { tabId, visible: false } });
+    await settlePendingCaptures(view);
+    expect(snapshotPushesOf(hostWindow)).toEqual([
+      {
+        tabId,
+        dataUrl: `data:image/jpeg;base64,${Buffer.from("jpeg-bytes").toString("base64")}`,
+      },
+    ]);
+
+    manager.captureSnapshot({ hostWindow, tabId });
+    manager.setVisible({ hostWindow, request: { tabId, visible: true } });
+    await settlePendingCaptures(view);
+    expect(snapshotPushesOf(hostWindow)).toHaveLength(1);
+  });
+
   it("reports user focus but suppresses programmatic focus used for restoration", () => {
     const manager = createDesktopBrowserViewManager({
       partition: "persist:test",

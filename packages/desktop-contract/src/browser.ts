@@ -369,6 +369,7 @@ export interface BbDesktopBrowserApi {
   onSnapshot?(
     listener: BbDesktopBrowserSnapshotHandler,
   ): BbDesktopBrowserUnsubscribe;
+  captureSnapshot?(tabId: string): void;
   findInPage?(request: BbDesktopBrowserFindInPageRequest): void;
   stopFindInPage?(request: BbDesktopBrowserStopFindInPageRequest): void;
   onFindResult?(

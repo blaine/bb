@@ -4,10 +4,6 @@ import type {
 } from "@bb/desktop-contract";
 import { clampBbDesktopBrowserViewBounds } from "@bb/desktop-contract";
 
-interface BrowserViewBoundsFromElementArgs {
-  element: HTMLElement;
-}
-
 interface BrowserViewBoundsEqualArgs {
   a: BbDesktopBrowserViewBounds;
   b: BbDesktopBrowserViewBounds;
@@ -36,13 +32,55 @@ function browserViewportBounds(): BbDesktopBrowserViewportBounds {
   };
 }
 
-export function browserViewBoundsFromElement(
-  args: BrowserViewBoundsFromElementArgs,
-): BbDesktopBrowserViewBounds {
-  return clampBbDesktopBrowserViewBounds({
-    bounds: roundedBoundsFromRect(args.element.getBoundingClientRect()),
-    viewport: browserViewportBounds(),
-  });
+export interface BrowserViewPlacement {
+  bounds: BbDesktopBrowserViewBounds;
+  clipped: boolean;
+}
+
+const BROWSER_VIEW_CLIP_TOLERANCE_PX = 1;
+
+function clipsOverflow(element: Element): boolean {
+  const style = window.getComputedStyle(element);
+  const clips = (value: string) => value !== "" && value !== "visible";
+  return (
+    clips(style.overflow) || clips(style.overflowX) || clips(style.overflowY)
+  );
+}
+
+export function readBrowserViewPlacement(
+  element: HTMLElement,
+): BrowserViewPlacement {
+  const rect = element.getBoundingClientRect();
+  let top = Number.NEGATIVE_INFINITY;
+  let left = Number.NEGATIVE_INFINITY;
+  let right = Number.POSITIVE_INFINITY;
+  let bottom = Number.POSITIVE_INFINITY;
+  for (
+    let ancestor = element.parentElement;
+    ancestor !== null &&
+    ancestor !== document.body &&
+    ancestor !== document.documentElement;
+    ancestor = ancestor.parentElement
+  ) {
+    if (!clipsOverflow(ancestor)) continue;
+    const clip = ancestor.getBoundingClientRect();
+    top = Math.max(top, clip.top);
+    left = Math.max(left, clip.left);
+    right = Math.min(right, clip.right);
+    bottom = Math.min(bottom, clip.bottom);
+  }
+  const clipped =
+    rect.top < top - BROWSER_VIEW_CLIP_TOLERANCE_PX ||
+    rect.left < left - BROWSER_VIEW_CLIP_TOLERANCE_PX ||
+    rect.right > right + BROWSER_VIEW_CLIP_TOLERANCE_PX ||
+    rect.bottom > bottom + BROWSER_VIEW_CLIP_TOLERANCE_PX;
+  return {
+    bounds: clampBbDesktopBrowserViewBounds({
+      bounds: roundedBoundsFromRect(rect),
+      viewport: browserViewportBounds(),
+    }),
+    clipped,
+  };
 }
 
 export function browserViewBoundsEqual(

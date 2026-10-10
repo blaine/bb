@@ -12,6 +12,7 @@ import {
 } from "@bb/desktop-contract";
 import {
   BB_DESKTOP_BROWSER_ATTACH_CHANNEL,
+  BB_DESKTOP_BROWSER_CAPTURE_SNAPSHOT_CHANNEL,
   BB_DESKTOP_BROWSER_DETACH_CHANNEL,
   BB_DESKTOP_BROWSER_EVALUATE_CHANNEL,
   BB_DESKTOP_BROWSER_FOCUS_CHANNEL,
@@ -142,6 +143,7 @@ class RecordingDesktopBrowserViewManager implements DesktopBrowserViewManager {
   }
 
   public readonly attachCalls: AttachCall[] = [];
+  public readonly captureSnapshotCalls: TabCommandCall[] = [];
   public readonly detachCalls: DetachCall[] = [];
   public readonly focusCalls: TabCommandCall[] = [];
   public readonly findInPageCalls: FindInPageCall[] = [];
@@ -166,6 +168,10 @@ class RecordingDesktopBrowserViewManager implements DesktopBrowserViewManager {
   }
 
   beginWindowResize(): void {}
+
+  captureSnapshot(args: TabCommandCall): void {
+    this.captureSnapshotCalls.push(args);
+  }
 
   prepareWindowReload(): void {}
 
@@ -552,6 +558,30 @@ describe("registerDesktopBrowserIpc", () => {
     ]);
     expect(manager.stopCalls).toEqual([
       { hostWindow: renderer.hostWindow, tabId: "browser:a" },
+    ]);
+  });
+
+  it("dispatches validated snapshot requests only from BrowserWindow-owned senders", () => {
+    const manager = new RecordingDesktopBrowserViewManager();
+    registerDesktopBrowserIpc(manager);
+    const renderer = createTrustedRenderer("main-window");
+    sendBrowserIpc({
+      channel: BB_DESKTOP_BROWSER_CAPTURE_SNAPSHOT_CHANNEL,
+      payload: { tabId: "plugin-view:acme:inbox" },
+      sender: renderer.sender,
+    });
+    sendBrowserIpc({
+      channel: BB_DESKTOP_BROWSER_CAPTURE_SNAPSHOT_CHANNEL,
+      payload: { tabId: "" },
+      sender: renderer.sender,
+    });
+    sendBrowserIpc({
+      channel: BB_DESKTOP_BROWSER_CAPTURE_SNAPSHOT_CHANNEL,
+      payload: { tabId: "plugin-view:acme:inbox" },
+      sender: createUntrustedSender(),
+    });
+    expect(manager.captureSnapshotCalls).toEqual([
+      { hostWindow: renderer.hostWindow, tabId: "plugin-view:acme:inbox" },
     ]);
   });
 });

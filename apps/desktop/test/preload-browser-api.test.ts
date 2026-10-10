@@ -19,6 +19,7 @@ import {
 } from "../src/desktop-update-ipc.js";
 import {
   BB_DESKTOP_BROWSER_ATTACH_CHANNEL,
+  BB_DESKTOP_BROWSER_CAPTURE_SNAPSHOT_CHANNEL,
   BB_DESKTOP_BROWSER_DETACH_CHANNEL,
   BB_DESKTOP_BROWSER_FOCUS_CHANNEL,
   BB_DESKTOP_BROWSER_FOCUSED_CHANNEL,
@@ -244,6 +245,7 @@ describe("desktop preload browser API", () => {
 
     expect(Object.keys(api.browser).sort()).toEqual([
       "attach",
+      "captureSnapshot",
       "detach",
       "evaluate",
       "findInPage",
@@ -289,6 +291,7 @@ describe("desktop preload browser API", () => {
     api.browser.setVisibleWithoutFocus?.(visibleRequest);
     api.browser.findInPage?.(findRequest);
     api.browser.stopFindInPage?.(stopFindRequest);
+    api.browser.captureSnapshot?.("browser:a");
     expect(api.focusWindow).toBeTypeOf("function");
     api.focusWindow?.();
     api.setTheme("dark");
@@ -347,6 +350,10 @@ describe("desktop preload browser API", () => {
       {
         channel: BB_DESKTOP_BROWSER_STOP_FIND_IN_PAGE_CHANNEL,
         payload: stopFindRequest,
+      },
+      {
+        channel: BB_DESKTOP_BROWSER_CAPTURE_SNAPSHOT_CHANNEL,
+        payload: { tabId: "browser:a" },
       },
       { channel: BB_DESKTOP_FOCUS_WINDOW_CHANNEL, payload: undefined },
       { channel: BB_DESKTOP_SET_THEME_CHANNEL, payload: "dark" },

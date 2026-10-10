@@ -1,13 +1,16 @@
 // @vitest-environment jsdom
 
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import type { ReactElement } from "react";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import type { BrowserFixedPanelTab } from "@/lib/fixed-panel-tabs-state";
 import { BrowserTabDeck } from "@/components/secondary-panel/BrowserTabDeck";
 import { resetBrowserViewPersistence } from "@/components/secondary-panel/browserViewVisibilityCoordinator";
 import { getPluginPagePanelStateId } from "@/components/plugin/plugin-page-panel-state";
-import { BROWSER_DIMMING_OVERLAYS } from "@/test/browser-dimming-overlays";
+import {
+  BROWSER_DIMMING_OVERLAYS,
+  DIALOG_OVERLAY,
+} from "@/test/browser-dimming-overlays";
 import {
   createRecordingDesktopBrowser,
   installRecordingDesktopBrowser,
@@ -152,6 +155,38 @@ describe.each(BROWSER_SURFACES)("browser view on the $name", (surface) => {
       expect(browser.detachments()).toEqual([]);
     },
   );
+
+  it("freezes to a snapshot under a dialog and drops it when the page returns", async () => {
+    const snapshot = "data:image/jpeg;base64,c25hcHNob3Q=";
+    const view = render(
+      <>
+        {surface.element()}
+        {DIALOG_OVERLAY.element(false)}
+      </>,
+    );
+    await waitFor(() => expect(browser.isShown(surface.viewId)).toBe(true));
+    view.rerender(
+      <>
+        {surface.element()}
+        {DIALOG_OVERLAY.element(true)}
+      </>,
+    );
+    await waitFor(() =>
+      expect(browser.snapshotRequests()).toEqual([surface.viewId]),
+    );
+    act(() =>
+      browser.emitSnapshot({ tabId: surface.viewId, dataUrl: snapshot }),
+    );
+    expect(document.querySelector(`img[src="${snapshot}"]`)).not.toBeNull();
+    view.rerender(
+      <>
+        {surface.element()}
+        {DIALOG_OVERLAY.element(false)}
+      </>,
+    );
+    await waitFor(() => expect(browser.isShown(surface.viewId)).toBe(true));
+    expect(document.querySelector(`img[src="${snapshot}"]`)).toBeNull();
+  });
 
   it("offers Open in browser and Copy link without the desktop app", async () => {
     delete window.bbDesktop;

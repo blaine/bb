@@ -756,7 +756,7 @@ export function BrowserView({
             onRetry={handleReloadOrStop}
             url={currentUrl}
           />
-        ) : hasPage && !isDimmed ? null : (
+        ) : hasPage ? null : (
           <BrowserNewTabScreen
             onNavigateInput={navigateToInput}
             recent={recent}

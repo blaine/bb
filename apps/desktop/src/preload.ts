@@ -63,6 +63,7 @@ import {
 } from "./desktop-update-ipc.js";
 import {
   BB_DESKTOP_BROWSER_ATTACH_CHANNEL,
+  BB_DESKTOP_BROWSER_CAPTURE_SNAPSHOT_CHANNEL,
   BB_DESKTOP_BROWSER_TARGET_CHANNEL,
   BB_DESKTOP_BROWSER_GET_CONTROL_CHANNEL,
   BB_DESKTOP_BROWSER_CONTROL_CHANNEL,
@@ -378,6 +379,9 @@ const bbBrowserApi: BbDesktopBrowserApi = {
   },
   onSnapshot(listener): BbDesktopBrowserUnsubscribe {
     return addListener(browserSnapshotListeners, listener);
+  },
+  captureSnapshot(tabId): void {
+    ipcRenderer.send(BB_DESKTOP_BROWSER_CAPTURE_SNAPSHOT_CHANNEL, { tabId });
   },
   findInPage(request): void {
     ipcRenderer.send(BB_DESKTOP_BROWSER_FIND_IN_PAGE_CHANNEL, request);

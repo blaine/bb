@@ -10,6 +10,7 @@ import {
   dialog,
   systemPreferences,
   type BrowserWindowConstructorOptions,
+  type NativeImage,
   type Session,
   type WebContents,
   type WebPreferences,
@@ -321,6 +322,7 @@ export interface DesktopBrowserViewManager {
   stopFindInPage(
     args: HostScopedRequestArgs<BbDesktopBrowserStopFindInPageRequest>,
   ): void;
+  captureSnapshot(args: HostScopedTabArgs): void;
   evaluate(
     args: HostScopedRequestArgs<BbDesktopBrowserEvaluateRequest>,
   ): Promise<BbDesktopBrowserEvaluateResult>;
@@ -453,6 +455,12 @@ function microphoneOrigin(url: string): string | null {
 
 function isAllowedBrowserPermission(permission: string): boolean {
   return permission === "clipboard-sanitized-write";
+}
+
+function snapshotDataUrl(image: NativeImage): string {
+  return `data:image/jpeg;base64,${image
+    .toJPEG(RESIZE_SNAPSHOT_JPEG_QUALITY)
+    .toString("base64")}`;
 }
 
 export function createDesktopBrowserViewManager(
@@ -604,9 +612,7 @@ export function createDesktopBrowserViewManager(
         ) {
           return;
         }
-        const dataUrl = `data:image/jpeg;base64,${image
-          .toJPEG(RESIZE_SNAPSHOT_JPEG_QUALITY)
-          .toString("base64")}`;
+        const dataUrl = snapshotDataUrl(image);
         send(hostWindow, BB_DESKTOP_BROWSER_SNAPSHOT_CHANNEL, {
           tabId,
           dataUrl,
@@ -1548,6 +1554,26 @@ export function createDesktopBrowserViewManager(
       withEntry({ hostWindow, tabId: request.tabId }, (entry) => {
         entry.activeFindRequestId = null;
         entry.webContents.stopFindInPage(request.action);
+      });
+    },
+    captureSnapshot({ hostWindow, tabId }) {
+      withEntry({ hostWindow, tabId }, (entry) => {
+        entry.webContents
+          .capturePage(undefined, { stayHidden: true, stayAwake: true })
+          .then((image) => {
+            if (
+              entry.visible ||
+              entry.webContents.isDestroyed() ||
+              image.isEmpty()
+            ) {
+              return;
+            }
+            send(hostWindow, BB_DESKTOP_BROWSER_SNAPSHOT_CHANNEL, {
+              tabId,
+              dataUrl: snapshotDataUrl(image),
+            });
+          })
+          .catch(() => {});
       });
     },
     setVisible({ hostWindow, request }) {

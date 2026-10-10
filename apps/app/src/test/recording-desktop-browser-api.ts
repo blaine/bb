@@ -20,7 +20,8 @@ export type RecordedBrowserCall =
   | {
       type: "setVisibleWithoutFocus";
       request: BbDesktopBrowserSetVisibleRequest;
-    };
+    }
+  | { type: "captureSnapshot"; tabId: string };
 
 export interface RecordingDesktopBrowser {
   api: BbDesktopBrowserApi;
@@ -29,6 +30,7 @@ export interface RecordingDesktopBrowser {
   detachments(): string[];
   bounds(tabId: string): BbDesktopBrowserSetBoundsRequest["bounds"][];
   isShown(tabId: string): boolean;
+  snapshotRequests(): string[];
   emitState(state: BbDesktopBrowserState): void;
   emitSnapshot(snapshot: BbDesktopBrowserSnapshot): void;
   emitScopedOpenTab(request: BbDesktopBrowserScopedOpenTabRequest): void;
@@ -70,6 +72,9 @@ export function createRecordingDesktopBrowser(): RecordingDesktopBrowser {
     setVisibleWithoutFocus(request) {
       calls.push({ type: "setVisibleWithoutFocus", request });
     },
+    captureSnapshot(tabId) {
+      calls.push({ type: "captureSnapshot", tabId });
+    },
     onState(listener) {
       stateListeners.add(listener);
       return () => {
@@ -102,11 +107,16 @@ export function createRecordingDesktopBrowser(): RecordingDesktopBrowser {
           ? [call.request.bounds]
           : [],
       ),
+    snapshotRequests: () =>
+      calls.flatMap((call) =>
+        call.type === "captureSnapshot" ? [call.tabId] : [],
+      ),
     isShown(tabId) {
       for (let index = calls.length - 1; index >= 0; index -= 1) {
         const call = calls[index];
         if (call === undefined || call.type === "detach") continue;
         if (call.type === "setBounds") continue;
+        if (call.type === "captureSnapshot") continue;
         if (call.request.tabId === tabId) return call.request.visible;
       }
       return false;
